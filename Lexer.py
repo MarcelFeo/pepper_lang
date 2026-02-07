@@ -41,7 +41,7 @@ class Lexer:
 
         output: str = ""
         while self.__is_digit(self.current_char) or self.current_char == '.':
-            if self.current_char == '.'
+            if self.current_char == '.':
                 dot_count += 1
 
             if dot_count > 1:

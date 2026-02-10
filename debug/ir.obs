@@ -5,6 +5,6 @@ target datalayout = ""
 define i32 @"main"()
 {
 main_entry:
-  %".2" = add i32 2, 2
+  %".2" = fmul float 0x4011000000000000, 0x4008f5c280000000
   ret i32 69
 }

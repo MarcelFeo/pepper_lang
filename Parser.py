@@ -3,7 +3,7 @@ from Token import Token, TokenType
 from typing import Callable
 from enum import Enum, auto
 
-from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, IntegerLiteral, FloatLiteral
+from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral
 
 # precedence types
 class PrecedenceType(Enum):
@@ -39,7 +39,8 @@ class Parser:
         self.prefix_parse_fns: dict[TokenType, Callable] = {
             TokenType.INT: self.__parse_int_literal,
             TokenType.FLOAT: self.__parse_float_literal,
-            TokenType.LPAREN: self.__parse_grouped_expression
+            TokenType.LPAREN: self.__parse_grouped_expression,
+            TokenType.IDENT: self.__parse_identifier
         } # -1
         self.infix_parse_fns: dict[TokenType, Callable] = {
             TokenType.PLUS: self.__parse_infix_expression,
@@ -58,8 +59,14 @@ class Parser:
         self.current_token = self.peek_token
         self.peek_token = self.lexer.next_token()
 
+    def __current_token_is(self, tt: TokenType) -> bool:
+        return self.current_token.type == tt
+
     def __peek_token_is(self, tt: TokenType) -> bool:
         return self.peek_token.type == tt
+
+    def __parse_identifier(self) -> Expressions:
+        return IdentifierLiteral(value=self.current_token.literal)
 
     def __expect_peek(self, tt:TokenType) -> bool:
         if self.__peek_token_is(tt):
@@ -102,7 +109,12 @@ class Parser:
 
     # statement methods
     def __parse_statement(self) -> Statements:
-        return self.__parse_expression_statement()
+        match self.current_token.type:
+            case TokenType.LET:
+                return self.__parse_let_statement()
+            case _:
+                return self.__parse_expression_statement()
+
 
     def __parse_expression_statement(self) -> ExpressionStatement:
         expr = self.__parse_expression(PrecedenceType.P_LOWEST)
@@ -111,6 +123,35 @@ class Parser:
             self.__next_token()
 
         stmt: ExpressionStatement = ExpressionStatement(expr=expr)
+
+        return stmt
+
+    def __parse_let_statement(self) -> LetStatement:
+        # let a$int = 10;
+        stmt: LetStatement = LetStatement()
+
+        if not self.__expect_peek(TokenType.IDENT):
+            return None
+
+        stmt.name = IdentifierLiteral(value=self.current_token.literal)
+
+        if not self.__expect_peek(TokenType.COLON):
+            return None
+
+        if not self.__expect_peek(TokenType.TYPE):
+            return None
+
+        stmt.value_type = self.current_token.literal
+
+        if not self.__expect_peek(TokenType.EQ):
+            return None
+
+        self.__next_token()
+
+        stmt.value = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        while not self.__current_token_is(TokenType.SEMICOLON) and not self.__current_token_is(TokenType.EOF):
+            self.__next_token()
 
         return stmt
 

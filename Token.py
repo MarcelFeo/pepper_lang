@@ -7,6 +7,7 @@ class TokenType(Enum):
     ILLEGAL = "ILLEGAL"
 
     # data types
+    IDENT = "IDENT"
     INT = "INT"
     FLOAT = "FLOAT"
 
@@ -18,10 +19,20 @@ class TokenType(Enum):
     POW = "POW"
     MODULUS = "MODULUS"
 
+    # assignemt symbols
+    EQ = "EQ"
+
     # symbols
+    COLON = "COLON"
     SEMICOLON = "SEMICOLON"
     LPAREN = "LPAREN"
     RPAREN = "RPAREN"
+
+    # keywords
+    LET = "LET"
+
+    # typing
+    TYPE = "TYPE"
 
 class Token:
     def __init__(self, type: TokenType, literal: Any, line_number: int, position: int) -> None:
@@ -36,6 +47,28 @@ class Token:
     def __repr__(self) -> str:
         return str(self)
 
+KEYWORDS: dict[str, TokenType] = {
+    "let": TokenType.LET
+}
 
+ALT_KEYWORDS: dict[str, TokenType] = {
+    "make": TokenType.LET,
+    "equal": TokenType.EQ,
+    "now": TokenType.SEMICOLON
+}
 
+TYPE_KEYWORDS: list[str] = ["int", "float"]
 
+def lookup_ident(ident: str) -> TokenType:
+    tt: TokenType | None = KEYWORDS.get(ident)
+    if tt is not None:
+        return tt
+
+    tt: TokenType | None = ALT_KEYWORDS.get(ident)
+    if tt is not None:
+        return tt
+
+    if ident in TYPE_KEYWORDS:
+        return TokenType.TYPE
+
+    return TokenType.IDENT

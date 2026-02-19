@@ -1,4 +1,4 @@
-from Token import Token, TokenType
+from Token import Token, TokenType, lookup_ident
 from typing import Any
 
 class Lexer:
@@ -35,6 +35,9 @@ class Lexer:
     def __is_digit(self, char: str):
         return '0' <= char and char <= '9'
 
+    def __is_letter(self, ch: str) -> bool:
+        return 'a' <= ch and ch <= 'z' or 'A' <= ch and ch <= 'Z' or ch == '_'
+
     def __read_number(self) -> Token:
         start_positon: int = self.position
         dot_count: int = 0
@@ -59,6 +62,18 @@ class Lexer:
         else:
             return self.__new_token(TokenType.FLOAT, float(output))
 
+    def __read_identifier(self) -> str:
+        position = self.position
+        while self.current_char is not None and (self.__is_letter(self.current_char) or self.current_char.isalnum()):
+            self.__read_char()
+
+        return self.source[position: self.position]
+
+    def __peek_char(self) -> str | None:
+        if self.read_position >= len(self.source):
+            return None
+        return self.source[self.read_position]
+
     def next_token(self) -> Token:
         tok: Token = None
 
@@ -68,15 +83,23 @@ class Lexer:
             case '+':
                 tok = self.__new_token(TokenType.PLUS, self.current_char)
             case '-':
-                tok = self.__new_token(TokenType.MINUS, self.current_char)
-            case 'x':
+                if self.__peek_char() == '>':
+                    self.__read_char()  # consome o '>'
+                    tok = self.__new_token(TokenType.EQ, "->")
+                else:
+                    tok = self.__new_token(TokenType.MINUS, self.current_char)
+            case '.':
                 tok = self.__new_token(TokenType.ASTERISK, self.current_char)
             case '/':
                 tok = self.__new_token(TokenType.SLASH, self.current_char)
-            case 'e':
+            case '^':
                 tok = self.__new_token(TokenType.POW, self.current_char)
             case '%':
                 tok = self.__new_token(TokenType.MODULUS, self.current_char)
+            # case '=':
+            #     tok = self.__new_token(TokenType.EQ, self.current_char)
+            case '$':
+                tok = self.__new_token(TokenType.COLON, self.current_char)
             case ';':
                 tok = self.__new_token(TokenType.SEMICOLON, self.current_char)
             case '(':
@@ -86,7 +109,12 @@ class Lexer:
             case None:
                 tok = self.__new_token(TokenType.EOF, "")
             case _:
-                if self.__is_digit(self.current_char):
+                if self.__is_letter(self.current_char):
+                    literal: str = self.__read_identifier()
+                    tt: TokenType = lookup_ident(literal)
+                    tok = self.__new_token(tt=tt, literal=literal)
+                    return tok
+                elif self.__is_digit(self.current_char):
                     tok = self.__read_number()
                     return tok
                 else:

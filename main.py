@@ -14,7 +14,7 @@ PARSER_DEBUG: bool = False
 COMPILER_DEBUG: bool = True
 
 if __name__ == '__main__':
-    with open("tests/compiler.obs", "r") as f:
+    with open("tests/test.obs", "r") as f:
         code: str = f.read()
 
     if LEXER_DEBUG:

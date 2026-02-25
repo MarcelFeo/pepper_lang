@@ -113,11 +113,3 @@ Test files are in [`tests/`](tests/):
 
 - Add new syntax: Update [`Token.py`](Token.py), [`Lexer.py`](Lexer.py), [`Parser.py`](Parser.py), and [`AST.py`](AST.py).
 - Add new codegen: Update [`Compiler.py`](Compiler.py).
-
-## License
-
-MIT License (add your license here).
-
----
-
-*This project is a learning compiler for a custom language, not intended for production use.*

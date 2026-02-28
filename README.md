@@ -151,14 +151,3 @@ Development notes
 - LLVM initialization is handled by `llvmlite.binding` automatically; avoid
     calling `llvm.initialize()` directly (it's deprecated).
 
-Contributing
-------------
-
-Contributions and suggestions are welcome. If you add features, please
-provide tests under `tests/` and update this README with language changes.
-
-License
--------
-
-This project is provided for learning and experimentation. No license is
-specified — add one if you plan to share or reuse this code externally.

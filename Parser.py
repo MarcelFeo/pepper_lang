@@ -4,6 +4,7 @@ from typing import Callable
 from enum import Enum, auto
 
 from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral
+from AST import FunctionStatement, BlockStatement, ReturnStatement
 
 # precedence types
 class PrecedenceType(Enum):
@@ -112,6 +113,10 @@ class Parser:
         match self.current_token.type:
             case TokenType.LET:
                 return self.__parse_let_statement()
+            case TokenType.FN:
+                return self.__parse_function_statement()
+            case TokenType.RETURN:
+                return self.__parse_return_statement()
             case _:
                 return self.__parse_expression_statement()
 
@@ -154,6 +159,88 @@ class Parser:
             self.__next_token()
 
         return stmt
+
+    def __parse_function_statement(self) -> FunctionStatement:
+        """Parse a function declaration.
+
+        The expected syntax is roughly:
+
+            fn name(param1$type, param2$type) : returnType { ... }
+
+        We currently don't implement parameter parsing beyond consuming
+        tokens until the closing parenthesis.  The earlier implementation
+        incorrectly returned early when tokens were valid, which left
+        the parser out of sync and caused the errors the user reported.
+        """
+        stmt: FunctionStatement = FunctionStatement()
+
+        # function name
+        if not self.__expect_peek(TokenType.IDENT):
+            return None
+        stmt.name = IdentifierLiteral(value=self.current_token.literal)
+
+        # opening parenthesis for parameters
+        if not self.__expect_peek(TokenType.LPAREN):
+            return None
+
+        # consume parameters (not yet supported).  We just need to
+        # advance to the closing parenthesis to keep the parser in sync.
+        stmt.parameters = []
+
+        if self.__peek_token_is(TokenType.RPAREN):
+            # empty parameter list: just consume ')'
+            self.__next_token()
+        else:
+            # consume everything up to the ')'
+            self.__next_token()
+            while not self.__current_token_is(TokenType.RPAREN) and \
+                  not self.__current_token_is(TokenType.EOF):
+                self.__next_token()
+            # current_token should now be RPAREN
+            if not self.__current_token_is(TokenType.RPAREN):
+                self.__peek_error(TokenType.RPAREN)
+                return None
+            # consume the closing paren
+            self.__next_token()
+
+        # return type arrow (colon in the source)
+        if not self.__expect_peek(TokenType.ARROW):
+            return None
+
+        if not self.__expect_peek(TokenType.TYPE):
+            return None
+        stmt.return_type = self.current_token.literal
+
+        if not self.__expect_peek(TokenType.LBRACE):
+            return None
+
+        stmt.body = self.__parse_block_statement()
+        return stmt
+
+    def __parse_return_statement(self) -> ReturnStatement:
+        stmt: ReturnStatement = ReturnStatement()
+
+        self.__next_token()
+
+        stmt.return_value = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        while not self.__current_token_is(TokenType.SEMICOLON) and not self.__current_token_is(TokenType.EOF):
+            self.__next_token()
+
+        return stmt
+
+    def __parse_block_statement(self) -> BlockStatement:
+        block: BlockStatement = BlockStatement()
+
+        self.__next_token()
+
+        while not self.__current_token_is(TokenType.RBRACE) and not self.__current_token_is(TokenType.EOF):
+            stmt = self.__parse_statement()
+            if stmt is not None:
+                block.statements.append(stmt)
+            self.__next_token()
+
+        return block
 
     # expression methods
     def __parse_expression(self, precedence: PrecedenceType) -> Expressions:

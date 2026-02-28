@@ -7,6 +7,9 @@ class NodeType(Enum):
     # statements
     ExpressionStatement = "ExpressionStatement"
     LetStatement = "LetStatement"
+    FunctionStatement = "FunctionStatement"
+    BlockStatement = "BlockStatement"
+    ReturnStatement = "ReturnStatement"
 
     # expressions
     InfixExpression = "InfixExpression"
@@ -75,6 +78,51 @@ class LetStatement(Statements):
             "value_type": self.value_type
         }
 
+class BlockStatement(Statements):
+    def __init__(self, statements: list[Statements] = None) -> None:
+        # allow caller to supply an initial list or create an empty one
+        self.statements: list[Statements] = statements if (statements is not None) else []
+
+    def type(self) -> NodeType:
+        return NodeType.BlockStatement
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "statements": [stmt.json() for stmt in self.statements]
+        }
+
+class ReturnStatement(Statements):
+    def __init__(self, return_value: Expressions = None) -> None:
+        self.return_value = return_value
+
+    def type(self) -> NodeType:
+        return NodeType.ReturnStatement
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "value": self.return_value.json() if self.return_value is not None else None
+        }
+
+class FunctionStatement(Statements):
+    def __init__(self, name: Expressions = None, parameters: list[Expressions] = None, body: BlockStatement = None, return_type: str = None) -> None:
+        self.name = name
+        self.parameters = parameters if parameters is not None else []
+        self.body = body
+        self.return_type = return_type
+
+    def type(self) -> NodeType:
+        return NodeType.FunctionStatement
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "name": self.name.json(),
+            "parameters": [param.json() for param in self.parameters],
+            "body": self.body.json(),
+            "return_type": self.return_type
+        }
 
 # expressions
 class InfixExpression(Expressions):

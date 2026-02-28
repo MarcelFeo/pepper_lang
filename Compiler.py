@@ -1,6 +1,7 @@
 from llvmlite import ir
 
 from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral
+from AST import FunctionStatement, BlockStatement, ReturnStatement
 
 from Environment import Environment
 
@@ -27,6 +28,12 @@ class Compiler:
                 self.__visit_expression_statement(node)
             case NodeType.LetStatement:
                 self.__visit_let_statement(node)
+            case NodeType.FunctionStatement:
+                self.__visit_function_statement(node)
+            case NodeType.BlockStatement:
+                self.__visit_block_statement(node)
+            case NodeType.ReturnStatement:
+                self.__visit_return_statement(node)
 
             # expressions
             case NodeType.InfixExpression:
@@ -34,22 +41,9 @@ class Compiler:
 
     # visit method
     def __visit_program(self, node: Program) -> None:
-        func_main: str = "main"
-        param_types: list[ir.Type] = []
-        return_type: ir.Type = self.type_map["int"]
-
-        fnty = ir.FunctionType(return_type, param_types)
-        func = ir.Function(self.module, fnty, name=func_main)
-
-        block = func.append_basic_block(f"{func_main}_entry")
-
-        self.builder = ir.IRBuilder(block)
-
         for stmt in node.statements:
             self.compile(stmt)
 
-        return_value: ir_Constant = ir.Constant(self.type_map["int"], 69)
-        self.builder.ret(return_value)
 
     # statements
     def __visit_expression_statement(self, node: ExpressionStatement) -> None:
@@ -69,11 +63,54 @@ class Compiler:
             # storing the value to the ptr
             self.builder.store(value, ptr)
 
-            # add the variable to the environment
-            self.env.define(name, value, Type)
+            # add the pointer (not the value) to the environment so future
+            # lookups return a pointer suitable for `builder.load`.
+            self.env.define(name, ptr, Type)
         else:
             ptr, _ = self.env.lookup(name)
             self.builder.store(value, ptr)
+
+    def __visit_function_statement(self, node: FunctionStatement) -> None:
+        name: str = node.name.value
+        body: BlockStatement = node.body
+        params: list[IdentifierLiteral] = node.parameters
+
+        param_names: list[str] = [param.value for param in params]
+
+        param_types: list[ir.Type] = [] # TODO
+
+        return_type: ir.Type = self.type_map[node.return_type]
+
+        fnty = ir.FunctionType(return_type, param_types)
+        func = ir.Function(self.module, fnty, name=name)
+
+        block = func.append_basic_block(f"{name}_entry")
+
+        previous_builder = self.builder
+
+        self.builder = ir.IRBuilder(block)
+
+        previous_env = self.env
+
+        # create a new child environment for the function body
+        # constructor uses `parent` (not `outer`) as per Environment.py
+        self.env = Environment(parent=previous_env)
+        self.env.define(name, func, return_type)
+
+        self.compile(body)
+
+        self.env = previous_env
+        self.env.define(name, func, return_type)
+
+        self.builder = previous_builder
+
+    def __visit_block_statement(self, node: BlockStatement) -> None:
+        for stmt in node.statements:
+            self.compile(stmt)
+
+    def __visit_return_statement(self, node: ReturnStatement) -> None:
+        value, Type = self.__resolve_value(node.return_value)
+        self.builder.ret(value)
 
     # expressions
     def __visit_infix_expression(self, node: InfixExpression) -> None:
@@ -136,4 +173,5 @@ class Compiler:
 
             # expression value
             case NodeType.InfixExpression:
-               return self.__visitc_infix_expression(node)
+                # typo fixed: should call __visit_infix_expression
+                return self.__visit_infix_expression(node)

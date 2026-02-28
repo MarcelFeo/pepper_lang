@@ -2,52 +2,37 @@
     "type": "Program",
     "statements": [
         {
-            "type": "LetStatement",
+            "type": "FunctionStatement",
             "name": {
                 "type": "IdentifierLiteral",
-                "value": "a"
+                "value": "main"
             },
-            "value": {
-                "type": "IntegerLiteral",
-                "value": 10
+            "parameters": [],
+            "body": {
+                "type": "BlockStatement",
+                "statements": [
+                    {
+                        "type": "LetStatement",
+                        "name": {
+                            "type": "IdentifierLiteral",
+                            "value": "a"
+                        },
+                        "value": {
+                            "type": "IntegerLiteral",
+                            "value": 4
+                        },
+                        "value_type": "int"
+                    },
+                    {
+                        "type": "ReturnStatement",
+                        "value": {
+                            "type": "IdentifierLiteral",
+                            "value": "a"
+                        }
+                    }
+                ]
             },
-            "value_type": "int"
-        },
-        {
-            "type": "LetStatement",
-            "name": {
-                "type": "IdentifierLiteral",
-                "value": "b"
-            },
-            "value": {
-                "type": "IntegerLiteral",
-                "value": 15
-            },
-            "value_type": "int"
-        },
-        {
-            "type": "LetStatement",
-            "name": {
-                "type": "IdentifierLiteral",
-                "value": "c"
-            },
-            "value": {
-                "type": "FloatLiteral",
-                "value": 22.2
-            },
-            "value_type": "float"
-        },
-        {
-            "type": "LetStatement",
-            "name": {
-                "type": "IdentifierLiteral",
-                "value": "d"
-            },
-            "value": {
-                "type": "FloatLiteral",
-                "value": 4.2
-            },
-            "value_type": "float"
+            "return_type": "int"
         }
     ]
 }

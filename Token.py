@@ -25,11 +25,16 @@ class TokenType(Enum):
     # symbols
     COLON = "COLON"
     SEMICOLON = "SEMICOLON"
+    ARROW = "ARROW"
     LPAREN = "LPAREN"
     RPAREN = "RPAREN"
+    LBRACE = "LBRACE"
+    RBRACE = "RBRACE"
 
     # keywords
     LET = "LET"
+    FN = "FN"
+    RETURN = "RETURN"
 
     # typing
     TYPE = "TYPE"
@@ -48,7 +53,12 @@ class Token:
         return str(self)
 
 KEYWORDS: dict[str, TokenType] = {
-    "let": TokenType.LET
+    "let": TokenType.LET,
+    # both `fn` and `fun` are accepted as function keywords; some tests
+    # historically used "fun" so we map it here for compatibility.
+    "fn": TokenType.FN,
+    "fun": TokenType.FN,
+    "return": TokenType.RETURN
 }
 
 ALT_KEYWORDS: dict[str, TokenType] = {

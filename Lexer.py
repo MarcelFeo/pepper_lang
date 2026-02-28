@@ -88,7 +88,7 @@ class Lexer:
                     tok = self.__new_token(TokenType.EQ, "->")
                 else:
                     tok = self.__new_token(TokenType.MINUS, self.current_char)
-            case '.':
+            case '*':
                 tok = self.__new_token(TokenType.ASTERISK, self.current_char)
             case '/':
                 tok = self.__new_token(TokenType.SLASH, self.current_char)
@@ -100,12 +100,18 @@ class Lexer:
             #     tok = self.__new_token(TokenType.EQ, self.current_char)
             case '$':
                 tok = self.__new_token(TokenType.COLON, self.current_char)
+            case ':':
+                tok = self.__new_token(TokenType.ARROW, self.current_char)
             case ';':
                 tok = self.__new_token(TokenType.SEMICOLON, self.current_char)
             case '(':
                 tok = self.__new_token(TokenType.LPAREN, self.current_char)
             case ')':
                 tok = self.__new_token(TokenType.RPAREN, self.current_char)
+            case '{':
+                tok = self.__new_token(TokenType.LBRACE, self.current_char)
+            case '}':
+                tok = self.__new_token(TokenType.RBRACE, self.current_char)
             case None:
                 tok = self.__new_token(TokenType.EOF, "")
             case _:

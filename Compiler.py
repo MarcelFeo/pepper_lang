@@ -1,6 +1,6 @@
 from llvmlite import ir
 
-from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral
+from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
 from AST import FunctionStatement, BlockStatement, ReturnStatement
 
 from Environment import Environment
@@ -18,6 +18,8 @@ class Compiler:
 
         self.env: Environment = Environment()
 
+        self.errors: list[str] = []
+
     def compile(self, node: Node) -> None:
         match node.type():
             case NodeType.Program:
@@ -34,6 +36,8 @@ class Compiler:
                 self.__visit_block_statement(node)
             case NodeType.ReturnStatement:
                 self.__visit_return_statement(node)
+            case NodeType.AssignmentStatement:
+                self.__visit_assign_statement(node)
 
             # expressions
             case NodeType.InfixExpression:
@@ -112,8 +116,20 @@ class Compiler:
         value, Type = self.__resolve_value(node.return_value)
         self.builder.ret(value)
 
+    def __visit_assign_statement(self, node: AssignmentStatement) -> None:
+        name: str = node.ident.value
+        value: Expression = node.right_value
+
+        value, Type = self.__resolve_value(node=value)
+
+        if self.env.lookup(name) is None:
+            raise Exception(f"Undefined variable '{name}'")
+
+        ptr, _ = self.env.lookup(name)
+        self.builder.store(value, ptr)
+
     # expressions
-    def __visit_infix_expression(self, node: InfixExpression) -> None:
+    def __visit_infix_expression(self, node: InfixExpression) -> tuple[ir.Value, ir.Type]:
         operator: str = node.operator
         left_value, left_type = self.__resolve_value(node.left_node)
         right_value, right_type = self.__resolve_value(node.right_node)
@@ -127,7 +143,7 @@ class Compiler:
                     value = self.builder.add(left_value, right_value)
                 case '-':
                     value = self.builder.sub(left_value, right_value)
-                case '.':
+                case '*':
                     value = self.builder.mul(left_value, right_value)
                 case '/':
                     value = self.builder.sdiv(left_value, right_value)
@@ -143,7 +159,7 @@ class Compiler:
                     value = self.builder.fadd(left_value, right_value)
                 case '-':
                     value = self.builder.fsub(left_value, right_value)
-                case '.':
+                case '*':
                     value = self.builder.fmul(left_value, right_value)
                 case '/':
                     value = self.builder.fdiv(left_value, right_value)
@@ -152,6 +168,7 @@ class Compiler:
                 case '**':
                     # TODO:
                     pass
+        return value, Type
 
         return value, Type
 

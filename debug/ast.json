@@ -24,6 +24,25 @@
                         "value_type": "int"
                     },
                     {
+                        "type": "AssignmentStatement",
+                        "ident": {
+                            "type": "IdentifierLiteral",
+                            "value": "a"
+                        },
+                        "right_value": {
+                            "type": "InfixExpression",
+                            "left_node": {
+                                "type": "IdentifierLiteral",
+                                "value": "a"
+                            },
+                            "operator": "*",
+                            "right_node": {
+                                "type": "IntegerLiteral",
+                                "value": 2
+                            }
+                        }
+                    },
+                    {
                         "type": "ReturnStatement",
                         "value": {
                             "type": "IdentifierLiteral",

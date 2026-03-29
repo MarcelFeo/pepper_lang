@@ -1,153 +1,135 @@
-# Obsidian Language Compiler - PROJECT IN PROGRESS
+# Obsidian Compiler
 
-A simple compiler for a custom language ("Obsidian") implemented in Python, using [llvmlite](https://github.com/numba/llvmlite) for LLVM IR code generation.
+## Descrição do Projeto
 
-## Features
+O **Obsidian Compiler** é um compilador completo para a linguagem de programação **Obsidian**, uma linguagem simples e imperativa projetada para fins educacionais e de demonstração. O compilador traduz código fonte escrito em Obsidian para código intermediário LLVM (IR), que pode ser executado diretamente usando o runtime LLVM. O projeto é implementado em Python e utiliza a biblioteca `llvmlite` para geração de código LLVM, permitindo a compilação just-in-time (JIT) e execução eficiente.
 
-- **Lexer**: Tokenizes source code into tokens.
-- **Parser**: Builds an Abstract Syntax Tree (AST) from tokens.
-- **Compiler**: Generates LLVM IR from the AST.
-- **Custom Language**: Supports variable declarations, arithmetic expressions, and basic types (`int`, `float`).
-- **Debugging**: Outputs AST as JSON and LLVM IR for inspection.
+O objetivo principal do projeto é demonstrar os conceitos fundamentais de compiladores, incluindo análise léxica, parsing, geração de código intermediário e execução. A linguagem Obsidian suporta variáveis, expressões aritméticas, funções, controle de fluxo básico e tipos simples como inteiros e floats.
 
-## Project Structure
+## Funcionamento da Linguagem Obsidian
 
+### Visão Geral
+Obsidian é uma linguagem imperativa com sintaxe inspirada em linguagens como C e Python, mas simplificada. Ela suporta:
+- Declaração e atribuição de variáveis.
+- Expressões aritméticas com operadores básicos.
+- Definição de funções.
+- Estruturas de controle como blocos e retornos.
+
+O compilador processa o código fonte em várias fases:
+1. **Análise Léxica (Lexer)**: Converte o código fonte em tokens.
+2. **Análise Sintática (Parser)**: Constrói uma Árvore de Sintaxe Abstrata (AST) a partir dos tokens.
+3. **Compilação (Compiler)**: Gera código LLVM IR a partir da AST.
+4. **Execução (Opcional)**: Usa LLVM para executar o código compilado.
+
+### Sintaxe da Linguagem
+
+#### Declaração de Variáveis
 ```
-AST.py              # AST node definitions
-Compiler.py         # LLVM IR code generation
-Environment.py      # Variable environment for codegen
-Lexer.py            # Tokenizer
-main.py             # Entry point
-# Obsidian — a small experimental language and compiler
+let nome$tipo -> valor;
+```
+Exemplo:
+```
+let a$int -> 10;
+let b$float -> 3.14;
+```
 
-Obsidian is a compact, educational compiler project written in Python that
-demonstrates a simple front-end (lexer + parser → AST) and a back-end that
-emits LLVM IR using `llvmlite`.  The goal is to be a clear learning codebase
-for language tooling and code generation experiments.
+#### Atribuição
+```
+nome -> expressão;
+```
+Exemplo:
+```
+a -> a * 2;
+```
 
-**Status:** actively developed; tests and examples are included.
-
-**Key ideas:**
-- Small, explicit AST representation (`AST.py`).
-- Hand-written recursive-descent parser (`Parser.py`).
-- LLVM IR generation via `llvmlite` (`Compiler.py`).
-- Minimal runtime: functions, local variables and arithmetic.
-
-**Repository layout**
-
-- `AST.py` — AST node classes and JSON serialization helpers.
-- `Lexer.py` — tokenizer that maps source text to `Token` values.
-- `Parser.py` — builds the AST from tokens (recursive-descent).
-- `Token.py` — token types, keywords and utility lookup.
-- `Compiler.py` — lowers AST to `llvmlite.ir` (LLVM IR) and provides
-    a small runtime harness in `main.py` for JIT execution.
-- `Environment.py` — symbol table / variable environment for codegen.
-- `main.py` — example runner that parses, compiles and optionally runs
-    the generated code.
-- `tests/` — small sample inputs used by the project.
-- `debug/` — generated artifacts (AST JSON, IR) produced when running.
-
-Language overview
------------------
-
-The language is intentionally small. Current features include:
-
-- Function declarations (keywords `fn` and `fun` are accepted).
-- Local variable declarations with explicit types.
-- Integer and float literals.
-- Basic binary arithmetic: `+`, `-`, `.` (multiply), `/`, `%`, and `^` (power planned).
-- `return` statements inside functions.
-
-Syntax examples
----------------
-
-Function with a local variable and a return:
-
+#### Funções
+```
+fun nome(parametros): tipo_retorno {
+    // corpo da função
+    return expressão;
+}
+```
+Exemplo:
 ```
 fun main(): int {
-        let a$int -> 4;
-        return a;
+    let a$int -> 4;
+    a -> a * 2;
+    return a;
 }
 ```
 
-Variable declarations support two flavors (legacy alternatives exist in
-tests):
+#### Expressões
+- Literais: `10`, `3.14`
+- Identificadores: `a`, `b`
+- Operadores aritméticos: `+`, `-`, `*`, `/`, `%`, `**` (potência, não implementado)
+- Agrupamento: `(expressão)`
 
+#### Tipos Suportados
+- `int`: Inteiro de 32 bits.
+- `float`: Ponto flutuante.
+
+### Como o Compilador Funciona
+
+O compilador é dividido em módulos principais:
+
+- **Lexer.py**: Responsável pela tokenização. Lê o código fonte e gera uma sequência de tokens.
+- **Parser.py**: Constrói a AST a partir dos tokens, usando precedência de operadores.
+- **AST.py**: Define as estruturas de dados para a árvore de sintaxe.
+- **Compiler.py**: Gera código LLVM IR a partir da AST. Usa um ambiente (Environment) para gerenciar variáveis.
+- **Environment.py**: Gerencia o escopo de variáveis, armazenando ponteiros LLVM.
+- **Token.py**: Define os tipos de tokens.
+- **main.py**: Ponto de entrada, coordena as fases de compilação e execução opcional.
+
+Durante a compilação, variáveis são alocadas na pilha usando `alloca`, e operações são traduzidas para instruções LLVM correspondentes.
+
+## Dependências e Motivos de Uso
+
+O projeto utiliza as seguintes bibliotecas Python:
+
+- **llvmlite**: Biblioteca para geração e manipulação de código LLVM IR. É usada porque LLVM é um backend robusto e eficiente para compilação, permitindo otimização e execução JIT. `llvmlite` fornece uma interface Python para LLVM, facilitando a geração de código sem precisar de C++.
+
+- **ctypes**: Biblioteca padrão do Python para chamar funções C. É usada para executar o código compilado, criando ponteiros de função a partir do endereço gerado pelo LLVM JIT. Permite a integração direta com código nativo.
+
+- **json**: Biblioteca padrão para manipulação de JSON. É usada para depuração, salvando a AST em formato JSON no arquivo `debug/ast.json`.
+
+- **time**: Biblioteca padrão para medição de tempo. É usada para medir o tempo de execução do código compilado, fornecendo feedback de performance.
+
+Nenhuma outra dependência externa é necessária, mantendo o projeto leve e fácil de instalar.
+
+## Como Usar
+
+### Pré-requisitos
+- Python 3.8+
+- LLVM instalado (para execução JIT)
+
+### Instalação
+Clone o repositório e instale as dependências:
 ```
-let x$int -> 10;        # canonical
-make y$int equal 15 now # alternative keyword forms
-```
-
-Tokens and keywords
--------------------
-
-See `Token.py` for the full token set. Keywords include `let`, `fn`/`fun`, and
-`return`. Types currently recognized are `int` and `float` (mapped to i32 and
-float in LLVM IR).
-
-Requirements
-------------
-
-- Python 3.10+
-- `llvmlite` (install with pip)
-
-Quick setup
------------
-
-Install the only external dependency:
-
-```bash
 pip install llvmlite
 ```
 
-Running the compiler
---------------------
+### Compilação e Execução
+1. Escreva código Obsidian em um arquivo, e.g., `tests/test_fun.obs`.
+2. Execute o compilador:
+   ```
+   python main.py
+   ```
+   - O código em `tests/test_fun.obs` será compilado.
+   - Se `RUN_CODE = True` em `main.py`, o código será executado e o resultado impresso.
+   - Se `COMPILER_DEBUG = True`, o IR LLVM será salvo em `debug/ir.obs`.
 
-The repository includes `main.py`, an example entry point. By default it
-parses `tests/test_fun.obs`, compiles it to LLVM IR and can JIT-run the
-function via `llvmlite.binding`.
+### Exemplos
+Veja os arquivos em `tests/`:
+- `test.obs`: Exemplo simples.
+- `test_fun.obs`: Função main com operações.
 
-Basic run (from repository root):
+### Depuração
+- `LEXER_DEBUG`: Imprime tokens.
+- `PARSER_DEBUG`: Salva AST em JSON.
+- `COMPILER_DEBUG`: Salva IR LLVM.
 
-```bash
-python main.py
-```
+## Contribuição
+Contribuições são bem-vindas! Abra issues para bugs ou sugestões, e pull requests para melhorias.
 
-The `main.py` script contains debug flags at the top that control behavior:
-
-- `LEXER_DEBUG` — print tokens from the lexer.
-- `PARSER_DEBUG` — dump AST JSON to `debug/ast.json`.
-- `COMPILER_DEBUG` — write the generated IR to `debug/ir.obs`.
-- `RUN_CODE` — whether to JIT-execute the compiled function.
-
-When `PARSER_DEBUG` is enabled the tool writes a human-readable AST JSON to
-`debug/ast.json` which is convenient for understanding parser output.
-
-Extending the language
-----------------------
-
-To add new syntax you typically need to change these components:
-
-1. `Token.py` — add new token kinds or keywords.
-2. `Lexer.py` — recognize the new token(s) in `next_token()`.
-3. `AST.py` — add AST nodes for new constructs and JSON serialization.
-4. `Parser.py` — implement parsing rules and register prefix/infix handlers.
-5. `Compiler.py` — implement codegen for the new AST nodes.
-
-Testing and examples
---------------------
-
-Simple input files for testing live in the `tests/` directory. Use them as
-starting points when adding features.
-
-Development notes
------------------
-
-- The project is intentionally explicit and easy to follow — it is a learning
-    playground rather than a production compiler.
-- Function parameter parsing is currently minimal (parameters are skipped).
-    If you want full parameter support, update `Parser.__parse_function_statement`
-    and wire parameter types into `Compiler.__visit_function_statement`.
-- LLVM initialization is handled by `llvmlite.binding` automatically; avoid
-    calling `llvm.initialize()` directly (it's deprecated).
-
+## Licença
+Este projeto é de código aberto, licenciado sob MIT.

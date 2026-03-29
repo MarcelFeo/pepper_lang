@@ -3,7 +3,7 @@ from Token import Token, TokenType
 from typing import Callable
 from enum import Enum, auto
 
-from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral
+from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
 from AST import FunctionStatement, BlockStatement, ReturnStatement
 
 # precedence types
@@ -110,6 +110,9 @@ class Parser:
 
     # statement methods
     def __parse_statement(self) -> Statements:
+        if self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+            return self.__parse_assignment_statement()
+
         match self.current_token.type:
             case TokenType.LET:
                 return self.__parse_let_statement()
@@ -241,6 +244,20 @@ class Parser:
             self.__next_token()
 
         return block
+
+    def __parse_assignment_statement(self) -> AssignmentStatement:
+        stmt: AssignmentStatement = AssignmentStatement()
+
+        stmt.ident = IdentifierLiteral(value=self.current_token.literal)
+
+        self.__next_token()  # consume identifier
+        self.__next_token()  # consume '->'(=)
+
+        stmt.right_value = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        self.__next_token()  # consume expression
+
+        return stmt
 
     # expression methods
     def __parse_expression(self, precedence: PrecedenceType) -> Expressions:

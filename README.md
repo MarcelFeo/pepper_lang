@@ -130,6 +130,3 @@ Veja os arquivos em `tests/`:
 
 ## Contribuição
 Contribuições são bem-vindas! Abra issues para bugs ou sugestões, e pull requests para melhorias.
-
-## Licença
-Este projeto é de código aberto, licenciado sob MIT.

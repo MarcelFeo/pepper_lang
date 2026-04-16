@@ -43,6 +43,10 @@ class TokenType(Enum):
     LET = "LET"
     FN = "FN"
     RETURN = "RETURN"
+    IF = "IF"
+    ELSE = "ELSE"
+    TRUE = "TRUE"
+    FALSE = "FALSE"
 
     # typing
     TYPE = "TYPE"
@@ -66,7 +70,11 @@ KEYWORDS: dict[str, TokenType] = {
     # historically used "fun" so we map it here for compatibility.
     "fn": TokenType.FN,
     "fun": TokenType.FN,
-    "return": TokenType.RETURN
+    "return": TokenType.RETURN,
+    "if": TokenType.IF,
+    "else": TokenType.ELSE,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE
 }
 
 ALT_KEYWORDS: dict[str, TokenType] = {

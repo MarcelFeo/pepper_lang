@@ -22,6 +22,14 @@ class TokenType(Enum):
     # assignemt symbols
     EQ = "EQ"
 
+    # comparison symbols
+    LT = '<'
+    GT = '>'
+    EQ_EQ = '=='
+    MOT_EQ = '!='
+    LT_EQ = '<='
+    GT_EQ = '>='
+
     # symbols
     COLON = "COLON"
     SEMICOLON = "SEMICOLON"

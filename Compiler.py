@@ -158,16 +158,18 @@ class Compiler:
 
         test, _ = self.__resolve_value(node=condition)
 
+        # If there is an alternative block, emit an if/else; otherwise
+        # emit a simple if (if-then) without an else branch.
         if alternative is not None:
-            with self.builder.if_then(test):
-                self.compile(consequence)
-        else:
             with self.builder.if_else(test) as (true, otherwise):
                 with true:
                     self.compile(consequence)
 
                 with otherwise:
                     self.compile(alternative)
+        else:
+            with self.builder.if_then(test):
+                self.compile(consequence)
 
     # expressions
     def __visit_infix_expression(self, node: InfixExpression) -> tuple[ir.Value, ir.Type]:

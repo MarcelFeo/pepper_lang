@@ -1,4 +1,191 @@
 # Obsidian Compiler
+# Linguagem Obsidian — Documento de Referência
+
+Esta documentação descreve a sintaxe, semântica e limitações atuais da linguagem "Obsidian" e como usar o compilador disponível neste repositório.
+
+## Visão Geral
+
+Obsidian é uma linguagem imperativa e tipada (estaticamente em notação), desenvolvida como um projeto educacional para demonstrar fases clássicas de compilador: lexer, parser, geração de AST e geração de LLVM IR. A implementação atual gera código LLVM usando `llvmlite` e pode executar programas via JIT.
+
+## Sintaxe e Gramática Essencial
+
+Observações gerais:
+- Blocos usam chaves `{ ... }`.
+- Instruções terminam em `;` quando necessário.
+- Comentários ainda não formalizados (considere usar apenas código limpo nos exemplos).
+
+### Declaração de Variáveis
+
+Forma:
+
+```
+let <ident>$<tipo> -> <expressão>;
+```
+
+Exemplos:
+
+```
+let a$int -> 5;
+let x$float -> 3.14;
+```
+
+Notas:
+- O tipo é escrito após `$` (por exemplo `a$int`).
+- A declaração aloca um espaço para a variável e armazena o valor inicial.
+
+### Atribuição
+
+Forma:
+
+```
+<ident> -> <expressão>;
+```
+
+Exemplo:
+
+```
+a -> 10;
+```
+
+### Funções
+
+Assinatura:
+
+```
+fun <nome>(<params>): <tipo_retorno> { ... }
+```
+
+Exemplo básico:
+
+```
+fun main(): int {
+    let a$int -> 4;
+    a -> a * 2;
+    return a;
+}
+```
+
+Observações:
+- O parser consome a lista de parâmetros, mas ainda não há suporte completo para tipos e nomes de parâmetros no gerador de código (implementação futura).
+
+### Expressões e Operadores
+
+- Literais: inteiros (ex.: `10`), floats (ex.: `3.14`).
+- Identificadores: nomes alfanuméricos.
+- Operadores aritméticos: `+`, `-`, `*`, `/`, `%`.
+- Operador de potência: `**` (sintaxe suportada pelo parser, sem implementação completa no backend).
+- Comparações: `<`, `<=`, `>`, `>=`, `==`, `!=`.
+- Operadores booleanos ainda limitados — comparação produz `bool` (representado internamente como `i1` em LLVM).
+
+Precedência de operadores é tratada no parser (ver `Parser.py`).
+
+### Controle de Fluxo — `if` / `else`
+
+Forma:
+
+```
+if <condicao> { <consequencia> } else { <alternativa> }
+```
+
+Exemplo:
+
+```
+if a == 5 {
+    a -> 10;
+} else {
+    a -> 20;
+}
+```
+
+Semântica atual:
+- `if` avalia a condição (uma expressão booleana) e executa o bloco consequente quando verdadeira.
+- `else` é opcional; quando presente, produz um ramo alternativo.
+- O compilador traduz `if`/`else` para blocos condicionais LLVM; mudanças recentes corrigiram bugs na detecção/consumo do token `else` e na geração do IR correspondente.
+
+### `return`
+
+Usado dentro de funções para retornar um valor:
+
+```
+return <expressao>;
+```
+
+## Tipos Suportados
+
+- `int` — inteiro de 32 bits (LLVM `i32`).
+- `float` — ponto flutuante (LLVM `float`).
+- `bool` — valor booleano representado como `i1` em LLVM.
+
+Observações: tipagem estática explícita (o tipo aparece na declaração `let` e em assinaturas de função) mas o sistema atual ainda não faz checagem completa de tipos em todos os caminhos.
+
+## Módulos Principais do Compilador
+
+- `Lexer.py`: tokenização.
+- `Parser.py`: construção da AST (utiliza funções de prefix/infix parsing e mapa de precedência).
+- `AST.py`: modelos de nós da AST.
+- `Compiler.py`: geração de LLVM IR usando `llvmlite` e um `Environment` para variáveis.
+- `Environment.py`: tabela de símbolos, mapeando nomes para ponteiros LLVM e tipos.
+- `main.py`: orquestra leitura do arquivo de entrada, parsing, compilação e execução JIT.
+
+## Limitações Atuais e Pontos Conhecidos
+
+- Operador de potência `**` não está implementado no backend.
+- Suporte a parâmetros de função está parcial (parâmetros são consumidos no parser, mas tipos/uso em código ainda não completos).
+- Inferência de tipos, checagem de tipos mais completa e tratamento de erros semânticos ainda a implementar.
+- Sistema de módulos/import ainda não existe.
+
+## Como Compilar e Executar
+
+Pré-requisitos:
+
+- Python 3.8+
+- `llvmlite` instalado (`pip install llvmlite`)
+- LLVM adequado ao seu ambiente (para JIT nativo)
+
+Executar (por padrão `main.py` lê `tests/test_if.obs`):
+
+```bash
+python main.py
+```
+
+Flags de depuração em `main.py`:
+- `LEXER_DEBUG = True` — imprime tokens do lexer.
+- `PARSER_DEBUG = True` — salva AST em `debug/ast.json`.
+- `COMPILER_DEBUG = True` — salva IR em `debug/ir.obs`.
+
+## Exemplo Completo
+
+Arquivo `tests/test_if.obs`:
+
+```
+fun main(): int {
+    let a$int -> 5;
+
+    if a == 5 {
+        a -> 10;
+    } else {
+        a -> 20;
+    }
+
+    return a;
+}
+```
+
+Esperado: o `if` altera `a` para `10` quando `a == 5`, caso contrário para `20`. O runtime JIT retorna o inteiro final da função `main`.
+
+## Desenvolvimento e Contribuição
+
+- Abra issues para bugs/evoluções.
+- Pull requests são bem-vindos; foque em testes de unidade e exemplos em `tests/`.
+
+## Mudanças Recentes (resumo)
+
+- Corrigido parsing de `if/else` em `Parser.py` para consumir corretamente `else` e blocos.
+- Corrigida geração de `if/else` em `Compiler.py` para emitir corretamente ramos `then` e `else`.
+
+---
+
+Arquivo principal de documentação: [README.md](README.md)
 
 ## Descrição do Projeto
 
@@ -130,3 +317,15 @@ Veja os arquivos em `tests/`:
 
 ## Contribuição
 Contribuições são bem-vindas! Abra issues para bugs ou sugestões, e pull requests para melhorias.
+
+## Mudanças Recentes
+
+- Parser (`Parser.py`): Corrigido `__parse_if_expression` para detectar e consumir corretamente o token `else` e os blocos `{}` associados, evitando que tokens de chave sejam deixados como `current_token` sem uma função de prefixo.
+- Parser (`Parser.py`): Melhorias no parsing de declarações de função (`__parse_function_statement`) — agora consumimos corretamente os parâmetros (mesmo quando não implementados) e o tipo de retorno, evitando dessincronização do parser.
+- Compiler (`Compiler.py`): Corrigida a lógica de `__visit_if_statement` que estava invertida — agora gera um `if/else` quando há alternativa, ou um `if` simples quando não há.
+- Vários pequenos ajustes de consistência e comentários para clarificar o fluxo de parsing/compilação.
+
+Próximos passos recomendados:
+- Rodar os testes em `tests/` para validar os casos de controle de fluxo.
+- Verificar `debug/ast.json` para inspecionar AST gerada para `if`/`else`.
+

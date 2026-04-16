@@ -26,7 +26,7 @@ class TokenType(Enum):
     LT = '<'
     GT = '>'
     EQ_EQ = '=='
-    MOT_EQ = '!='
+    NOT_EQ = '!='
     LT_EQ = '<='
     GT_EQ = '>='
 

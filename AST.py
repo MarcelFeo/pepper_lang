@@ -11,6 +11,7 @@ class NodeType(Enum):
     BlockStatement = "BlockStatement"
     ReturnStatement = "ReturnStatement"
     AssignmentStatement = "AssignmentStatement"
+    IfStatement = "IfStatement"
 
     # expressions
     InfixExpression = "InfixExpression"
@@ -19,6 +20,7 @@ class NodeType(Enum):
     IntegerLiteral = "IntegerLiteral"
     FloatLiteral = "FloatLiteral"
     IdentifierLiteral = "IdentifierLiteral"
+    BooleanLiteral = "BooleanLiteral"
 
 class Node(ABC):
     @abstractmethod
@@ -140,6 +142,23 @@ class AssignmentStatement(Statements):
             "right_value": self.right_value.json()
         }
 
+class IfStatement(Statements):
+    def __init__(self, condition: Expressions = None, consequence: BlockStatement = None, alternative: BlockStatement = None) -> None:
+        self.condition = condition
+        self.consequence = consequence
+        self.alternative = alternative
+
+    def type(self) -> NodeType:
+        return NodeType.IfStatement
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "condition": self.condition.json(),
+            "consequence": self.consequence.json(),
+            "alternative": self.alternative.json() if self.alternative is not None else None
+        }
+
 # expressions
 class InfixExpression(Expressions):
     def __init__(self, left_node: Expressions, operator: str, right_node: Expressions = None) -> None:
@@ -191,6 +210,19 @@ class IdentifierLiteral(Expressions):
 
     def type(self) -> NodeType:
         return NodeType.IdentifierLiteral
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "value": self.value
+        }
+
+class BooleanLiteral(Expressions):
+    def __init__(self, value: bool = None) -> None:
+        self.value: bool = value
+
+    def type(self) -> NodeType:
+        return NodeType.BooleanLiteral
 
     def json(self) -> dict:
         return {

@@ -9,7 +9,8 @@ class Compiler:
     def __init__(self) -> None:
         self.type_map: dict[str, ir.Type] = {
             'int': ir.IntType(32),
-            'float': ir.FloatType()
+            'float': ir.FloatType(),
+            'bool': ir.IntType(1)
         }
 
         self.module: ir.Module = ir.Module('main')
@@ -19,6 +20,26 @@ class Compiler:
         self.env: Environment = Environment()
 
         self.errors: list[str] = []
+
+        self.__initialize_builtins()
+
+    def __initialize_builtins(self) -> None:
+        def __init_booleans() -> tuple[ir.GlobalVariable, ir.GlobalVariable]:
+            bool_type: ir.Type = self.type_map['bool']
+
+            true_var = ir.GlobalVariable(self.module, bool_type, name="true")
+            true_var.initializer = ir.Constant(bool_type, 1)
+            true_var.global_constant = True
+
+            false_var = ir.GlobalVariable(self.module, bool_type, name="false")
+            false_var.initializer = ir.Constant(bool_type, 0)
+            false_var.global_constant = True
+
+            return true_var, false_var
+
+        true_var, false_var = __init_booleans()
+        self.env.define("true", true_var, true_var.type)
+        self.env.define("false", false_var, false_var.type)
 
     def compile(self, node: Node) -> None:
         match node.type():
@@ -38,6 +59,8 @@ class Compiler:
                 self.__visit_return_statement(node)
             case NodeType.AssignmentStatement:
                 self.__visit_assign_statement(node)
+            case NodeType.IfStatement:
+                self.__visit_if_statement(node)
 
             # expressions
             case NodeType.InfixExpression:
@@ -128,6 +151,24 @@ class Compiler:
         ptr, _ = self.env.lookup(name)
         self.builder.store(value, ptr)
 
+    def __visit_if_statement(self, node: Statements) -> None:
+        condition = node.condition
+        consequence = node.consequence
+        alternative = node.alternative
+
+        test, _ = self.__resolve_value(node=condition)
+
+        if alternative is not None:
+            with self.builder.if_then(test):
+                self.compile(consequence)
+        else:
+            with self.builder.if_else(test) as (true, otherwise):
+                with true:
+                    self.compile(consequence)
+
+                with otherwise:
+                    self.compile(alternative)
+
     # expressions
     def __visit_infix_expression(self, node: InfixExpression) -> tuple[ir.Value, ir.Type]:
         operator: str = node.operator
@@ -152,6 +193,22 @@ class Compiler:
                 case '**':
                     # TODO:
                     pass
+                case '<':
+                    value = self.builder.icmp_signed('<', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '<=':
+                    value = self.builder.icmp_signed('<=', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '>':
+                    value = self.builder.icmp_signed('>', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '>=':
+                    value = self.builder.icmp_signed('>=', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '==':
+                    value = self.builder.icmp_signed('==', left_value, right_value)
+                    Type = ir.IntType(1)
+
         elif isinstance(right_type, ir.FloatType) and isinstance(left_type, ir.FloatType):
             Type = ir.FloatType()
             match operator:
@@ -168,9 +225,24 @@ class Compiler:
                 case '**':
                     # TODO:
                     pass
-        return value, Type
+                case '<':
+                    value = self.builder.fcmp_ordered('<', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '<=':
+                    value = self.builder.fcmp_ordered('<=', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '>':
+                    value = self.builder.fcmp_ordered('>', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '>=':
+                    value = self.builder.fcmp_ordered('>=', left_value, right_value)
+                    Type = ir.IntType(1)
+                case '==':
+                    value = self.builder.fcmp_ordered('==', left_value, right_value)
+                    Type = ir.IntType(1)
 
         return value, Type
+
 
     # helpers methods
     def __resolve_value(self, node: Expressions) -> tuple[ir.Value, ir.Type]:
@@ -187,6 +259,9 @@ class Compiler:
                 node: IdentifierLiteral = node
                 ptr, Type = self.env.lookup(node.value)
                 return self.builder.load(ptr), Type
+            case NodeType.BooleanLiteral:
+                node: BooleanLiteral = node
+                return ir.Constant(ir.IntType(1), int(node.value)), ir.IntType(1)
 
             # expression value
             case NodeType.InfixExpression:

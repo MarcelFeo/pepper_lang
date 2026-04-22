@@ -4,7 +4,7 @@ from typing import Callable
 from enum import Enum, auto
 
 from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
-from AST import IfStatement, BooleanLiteral
+from AST import IfStatement, BooleanLiteral, CallExpression
 from AST import FunctionStatement, BlockStatement, ReturnStatement
 
 # precedence types
@@ -32,7 +32,8 @@ PRECEDENCE: dict[TokenType, PrecedenceType] = {
     TokenType.LT: PrecedenceType.P_LESSGREATER,
     TokenType.GT: PrecedenceType.P_LESSGREATER,
     TokenType.LT_EQ: PrecedenceType.P_LESSGREATER,
-    TokenType.GT_EQ: PrecedenceType.P_LESSGREATER
+    TokenType.GT_EQ: PrecedenceType.P_LESSGREATER,
+    TokenType.LPAREN: PrecedenceType.P_CALL
 }
 
 class Parser:
@@ -65,8 +66,9 @@ class Parser:
             TokenType.LT: self.__parse_infix_expression,
             TokenType.GT: self.__parse_infix_expression,
             TokenType.LT_EQ: self.__parse_infix_expression,
-            TokenType.GT_EQ: self.__parse_infix_expression
-        }  # 5 + 5
+            TokenType.GT_EQ: self.__parse_infix_expression,
+            TokenType.LPAREN: self.__parse_call_expression
+        }
 
         self.__next_token()
         self.__next_token()
@@ -340,6 +342,14 @@ class Parser:
 
         return exp
 
+    def __parse_call_expression(self, fun: Expressions) -> CallExpression:
+        call_expr: CallExpression = CallExpression(function=fun)
+
+        call_expr.arguments = [] #TODO
+
+        if not self.__expect_peek(TokenType.RPAREN):
+            return None
+        return call_expr
 
     # prefix methods
     def __parse_int_literal(self) -> Expressions:

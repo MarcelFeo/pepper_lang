@@ -1,0 +1,7 @@
+fun test(): int {
+    return 1;
+}
+
+fun main(): int {
+    return test();
+}

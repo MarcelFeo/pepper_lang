@@ -12,11 +12,11 @@ from ctypes import CFUNCTYPE, c_int, c_float #
 # debug flags
 LEXER_DEBUG: bool = False
 PARSER_DEBUG: bool = False
-COMPILER_DEBUG: bool = False
-RUN_CODE: bool = True
+COMPILER_DEBUG: bool = True
+RUN_CODE: bool = False
 
 if __name__ == '__main__':
-    with open("tests/test_if.obs", "r") as f:
+    with open("tests/test_call_function.obs", "r") as f:
         code: str = f.read()
 
     if LEXER_DEBUG:

@@ -1,7 +1,7 @@
 from llvmlite import ir
 
 from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
-from AST import FunctionStatement, BlockStatement, ReturnStatement
+from AST import FunctionStatement, BlockStatement, ReturnStatement, CallExpression, BooleanLiteral, IfStatement
 
 from Environment import Environment
 
@@ -65,6 +65,8 @@ class Compiler:
             # expressions
             case NodeType.InfixExpression:
                 self.__visit_infix_expression(node)
+            case NodeType.CallExpression:
+                self.__visit_call_expression(node)
 
     # visit method
     def __visit_program(self, node: Program) -> None:
@@ -245,6 +247,20 @@ class Compiler:
 
         return value, Type
 
+    def __visit_call_expression(self, node: CallExpression) -> None:
+        name: str = node.function.value
+        parameters: list[Expressions] = node.arguments
+
+        args = []
+        types = []
+        # TODO
+
+        match name:
+            case _:
+                func, ret_type = self.env.lookup(name)
+                ret = self.builder.call(func, args)
+
+        return ret, ret_type
 
     # helpers methods
     def __resolve_value(self, node: Expressions) -> tuple[ir.Value, ir.Type]:
@@ -269,3 +285,5 @@ class Compiler:
             case NodeType.InfixExpression:
                 # typo fixed: should call __visit_infix_expression
                 return self.__visit_infix_expression(node)
+            case NodeType.CallExpression:
+                return self.__visit_call_expression(node)

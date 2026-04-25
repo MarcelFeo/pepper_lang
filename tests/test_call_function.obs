@@ -6,10 +6,10 @@ fun add(a$int, b$int): int {
     return a + b;
 }
 
-fun div(a$int, b$int):int {
+fun divisao(a$int, b$int):float {
     return a/b;
 }
 
-fun main(): int {
-    return div(8, 3);
+fun main(): float {
+    return divisao(5, 2);
 }

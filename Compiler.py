@@ -152,6 +152,24 @@ class Compiler:
 
     def __visit_return_statement(self, node: ReturnStatement) -> None:
         value, Type = self.__resolve_value(node.return_value)
+        # Ensure the returned LLVM value matches the function's return type.
+        # If not, try to perform a safe cast (e.g. int -> float).
+        expected_ret_type = None
+        try:
+            expected_ret_type = self.builder.block.function.function_type.return_type
+        except Exception:
+            expected_ret_type = None
+
+        if expected_ret_type is not None and Type is not None and Type != expected_ret_type:
+            # int -> float
+            if isinstance(Type, ir.IntType) and isinstance(expected_ret_type, ir.FloatType):
+                value = self.builder.sitofp(value, expected_ret_type)
+                Type = expected_ret_type
+            # float -> int
+            elif isinstance(Type, ir.FloatType) and isinstance(expected_ret_type, ir.IntType):
+                value = self.builder.fptosi(value, expected_ret_type)
+                Type = expected_ret_type
+
         self.builder.ret(value)
 
     def __visit_assign_statement(self, node: AssignmentStatement) -> None:
@@ -204,7 +222,12 @@ class Compiler:
                 case '*':
                     value = self.builder.mul(left_value, right_value)
                 case '/':
-                    value = self.builder.sdiv(left_value, right_value)
+                    # promote integer division to float division so expressions
+                    # like `5 / 2` can produce `2.5` when used in float contexts.
+                    left_fp = self.builder.sitofp(left_value, ir.FloatType())
+                    right_fp = self.builder.sitofp(right_value, ir.FloatType())
+                    value = self.builder.fdiv(left_fp, right_fp)
+                    Type = ir.FloatType()
                 case '%':
                     value = self.builder.srem(left_value, right_value)
                 case '**':

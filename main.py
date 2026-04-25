@@ -75,7 +75,14 @@ if __name__ == '__main__':
         engine.finalize_object()
 
         entry = engine.get_function_address("main")
-        cfunc = CFUNCTYPE(c_int)(entry)
+
+        # Select appropriate ctypes return type based on compiled `main` signature
+        main_fn = module.get_global('main')
+        ret_type = main_fn.function_type.return_type
+        if isinstance(ret_type, ir.FloatType):
+            cfunc = CFUNCTYPE(c_float)(entry)
+        else:
+            cfunc = CFUNCTYPE(c_int)(entry)
 
         st = time.time()
 

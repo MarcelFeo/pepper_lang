@@ -23,22 +23,24 @@ add_entry:
   ret i32 %".10"
 }
 
-define i32 @"div"(i32 %"a", i32 %"b")
+define float @"divisao"(i32 %"a", i32 %"b")
 {
-div_entry:
+divisao_entry:
   %".4" = alloca i32
   store i32 %"a", i32* %".4"
   %".6" = alloca i32
   store i32 %"b", i32* %".6"
   %".8" = load i32, i32* %".4"
   %".9" = load i32, i32* %".6"
-  %".10" = sdiv i32 %".8", %".9"
-  ret i32 %".10"
+  %".10" = sitofp i32 %".8" to float
+  %".11" = sitofp i32 %".9" to float
+  %".12" = fdiv float %".10", %".11"
+  ret float %".12"
 }
 
-define i32 @"main"()
+define float @"main"()
 {
 main_entry:
-  %".2" = call i32 @"div"(i32 8, i32 3)
-  ret i32 %".2"
+  %".2" = call float @"divisao"(i32 5, i32 2)
+  ret float %".2"
 }

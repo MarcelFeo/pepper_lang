@@ -10,9 +10,35 @@ test_entry:
   ret i32 1
 }
 
+define i32 @"add"(i32 %"a", i32 %"b")
+{
+add_entry:
+  %".4" = alloca i32
+  store i32 %"a", i32* %".4"
+  %".6" = alloca i32
+  store i32 %"b", i32* %".6"
+  %".8" = load i32, i32* %".4"
+  %".9" = load i32, i32* %".6"
+  %".10" = add i32 %".8", %".9"
+  ret i32 %".10"
+}
+
+define i32 @"div"(i32 %"a", i32 %"b")
+{
+div_entry:
+  %".4" = alloca i32
+  store i32 %"a", i32* %".4"
+  %".6" = alloca i32
+  store i32 %"b", i32* %".6"
+  %".8" = load i32, i32* %".4"
+  %".9" = load i32, i32* %".6"
+  %".10" = sdiv i32 %".8", %".9"
+  ret i32 %".10"
+}
+
 define i32 @"main"()
 {
 main_entry:
-  %".2" = call i32 @"test"()
+  %".2" = call i32 @"div"(i32 8, i32 3)
   ret i32 %".2"
 }

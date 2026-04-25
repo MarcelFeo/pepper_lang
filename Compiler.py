@@ -1,7 +1,7 @@
 from llvmlite import ir
 
 from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
-from AST import FunctionStatement, BlockStatement, ReturnStatement, CallExpression, BooleanLiteral, IfStatement
+from AST import FunctionStatement, FunctionParameter, BlockStatement, ReturnStatement, CallExpression, BooleanLiteral, IfStatement
 
 from Environment import Environment
 
@@ -102,11 +102,15 @@ class Compiler:
     def __visit_function_statement(self, node: FunctionStatement) -> None:
         name: str = node.name.value
         body: BlockStatement = node.body
-        params: list[IdentifierLiteral] = node.parameters
+        params: list[FunctionParameter] = node.parameters
 
-        param_names: list[str] = [param.value for param in params]
+        param_names: list[str] = [param.name.value for param in params]
 
-        param_types: list[ir.Type] = [] # TODO
+        param_types: list[ir.Type] = []
+        for param in params:
+            if param.param_type is None:
+                raise Exception(f"Parameter '{param.name.value}' missing type")
+            param_types.append(self.type_map[param.param_type])
 
         return_type: ir.Type = self.type_map[node.return_type]
 
@@ -124,6 +128,15 @@ class Compiler:
         # create a new child environment for the function body
         # constructor uses `parent` (not `outer`) as per Environment.py
         self.env = Environment(parent=previous_env)
+        # bind parameters: create stack slots and store incoming args
+        for i, param in enumerate(params):
+            arg = func.args[i]
+            arg.name = param.name.value
+            ptr = self.builder.alloca(param_types[i])
+            self.builder.store(arg, ptr)
+            self.env.define(arg.name, ptr, param_types[i])
+
+        # expose the function itself in the environment
         self.env.define(name, func, return_type)
 
         self.compile(body)
@@ -253,7 +266,11 @@ class Compiler:
 
         args = []
         types = []
-        # TODO
+
+        for arg_node in parameters:
+            val, Type = self.__resolve_value(arg_node)
+            args.append(val)
+            types.append(Type)
 
         match name:
             case _:

@@ -5,7 +5,7 @@ from enum import Enum, auto
 
 from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
 from AST import IfStatement, BooleanLiteral, CallExpression
-from AST import FunctionStatement, BlockStatement, ReturnStatement
+from AST import FunctionStatement, BlockStatement, ReturnStatement, FunctionParameter
 
 # precedence types
 class PrecedenceType(Enum):
@@ -206,25 +206,11 @@ class Parser:
 
         # consume parameters (not yet supported).  We just need to
         # advance to the closing parenthesis to keep the parser in sync.
-        stmt.parameters = []
-
-        if self.__peek_token_is(TokenType.RPAREN):
-            # empty parameter list: just consume ')'
-            self.__next_token()
-        else:
-            # consume everything up to the ')'
-            self.__next_token()
-            while not self.__current_token_is(TokenType.RPAREN) and \
-                  not self.__current_token_is(TokenType.EOF):
-                self.__next_token()
-            # current_token should now be RPAREN
-            if not self.__current_token_is(TokenType.RPAREN):
-                self.__peek_error(TokenType.RPAREN)
-                return None
-            # consume the closing paren
-            self.__next_token()
-
-        # return type arrow (colon in the source)
+        stmt.parameters = self.__parse_function_parameters()
+        # At this point `__parse_function_parameters` should have
+        # consumed the closing ')' and positioned the parser so that
+        # `peek_token` is the return-type arrow (':' in source).
+        # Proceed to parse the return type and function body.
         if not self.__expect_peek(TokenType.ARROW):
             return None
 
@@ -236,7 +222,48 @@ class Parser:
             return None
 
         stmt.body = self.__parse_block_statement()
+
         return stmt
+
+    def __parse_function_parameters(self) -> list[FunctionParameter]:
+        params: list[FunctionParameter] = []
+
+        if self.__peek_token_is(TokenType.RPAREN):
+            self.__next_token()
+            return params
+
+        self.__next_token()
+
+        first_param: FunctionParameter = FunctionParameter(name=IdentifierLiteral(value=self.current_token.literal))
+
+        if not self.__expect_peek(TokenType.COLON):
+            return None
+
+        self.__next_token()
+
+        # store the parameter type string in `param_type` to avoid
+        # shadowing the `type()` method defined on AST nodes
+        first_param.param_type = self.current_token.literal
+        params.append(first_param)
+
+        while self.__peek_token_is(TokenType.COMMA):
+            self.__next_token()  # consume comma
+            self.__next_token()  # move to next parameter name
+
+            param: FunctionParameter = FunctionParameter(name=IdentifierLiteral(value=self.current_token.literal))
+
+            if not self.__expect_peek(TokenType.COLON):
+                return None
+
+            self.__next_token()
+
+            param.param_type = self.current_token.literal
+            params.append(param)
+
+        if not self.__expect_peek(TokenType.RPAREN):
+            return None
+
+        return params
 
     def __parse_return_statement(self) -> ReturnStatement:
         stmt: ReturnStatement = ReturnStatement()
@@ -343,13 +370,30 @@ class Parser:
         return exp
 
     def __parse_call_expression(self, fun: Expressions) -> CallExpression:
-        call_expr: CallExpression = CallExpression(function=fun)
+        expr: CallExpression = CallExpression(function=fun)
+        expr.arguments = self.__parse_expression_list(TokenType.RPAREN)
 
-        call_expr.arguments = [] #TODO
+        return expr
 
-        if not self.__expect_peek(TokenType.RPAREN):
+    def __parse_expression_list(self, end: TokenType) -> list[Expressions]:
+        args: list[Expressions] = []
+
+        if self.__peek_token_is(end):
+            self.__next_token()
+            return args
+
+        self.__next_token()
+        args.append(self.__parse_expression(PrecedenceType.P_LOWEST))
+
+        while self.__peek_token_is(TokenType.COMMA):
+            self.__next_token()  # consume comma
+            self.__next_token()  # move to next expression
+            args.append(self.__parse_expression(PrecedenceType.P_LOWEST))
+
+        if not self.__expect_peek(end):
             return None
-        return call_expr
+
+        return args
 
     # prefix methods
     def __parse_int_literal(self) -> Expressions:

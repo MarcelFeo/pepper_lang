@@ -7,7 +7,8 @@ import time
 
 from llvmlite import ir
 import llvmlite.binding as llvm
-from ctypes import CFUNCTYPE, c_int, c_float #
+from ctypes import CFUNCTYPE, c_int, c_float, c_char_p
+import ctypes
 
 # debug flags
 LEXER_DEBUG: bool = False
@@ -16,7 +17,7 @@ COMPILER_DEBUG: bool = True
 RUN_CODE: bool = True
 
 if __name__ == '__main__':
-    with open("tests/test_call_function.obs", "r") as f:
+    with open("tests/test_printf.obs", "r") as f:
         code: str = f.read()
 
     if LEXER_DEBUG:
@@ -72,6 +73,22 @@ if __name__ == '__main__':
         target_machine = llvm.Target.from_default_triple().create_target_machine()
 
         engine = llvm.create_mcjit_compiler(llvm_ir_parser, target_machine)
+        # register a Python wrapper for printf so the JIT can resolve it
+        def _py_printf(fmt, val):
+            try:
+                s = ctypes.cast(fmt, ctypes.c_char_p).value.decode('utf-8')
+            except Exception:
+                s = fmt
+            try:
+                out = s % val
+            except Exception:
+                out = s
+            print(out, end='')
+            return len(out)
+
+        py_printf_c = CFUNCTYPE(c_int, c_char_p, c_int)(_py_printf)
+        llvm.add_symbol("printf", ctypes.cast(py_printf_c, ctypes.c_void_p).value)
+
         engine.finalize_object()
 
         entry = engine.get_function_address("main")
@@ -89,6 +106,3 @@ if __name__ == '__main__':
         result = cfunc()
 
         et = time.time()
-
-        print(f"RESULT: {result}")
-        print(f"EXECUTION TIME: {et - st} seconds")

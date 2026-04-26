@@ -5,6 +5,7 @@ from enum import Enum, auto
 
 from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
 from AST import IfStatement, BooleanLiteral, CallExpression
+from AST import StringLiteral
 from AST import FunctionStatement, BlockStatement, ReturnStatement, FunctionParameter
 
 # precedence types
@@ -48,6 +49,7 @@ class Parser:
         self.prefix_parse_fns: dict[TokenType, Callable] = {
             TokenType.INT: self.__parse_int_literal,
             TokenType.FLOAT: self.__parse_float_literal,
+            TokenType.STRING: self.__parse_string_literal,
             TokenType.LPAREN: self.__parse_grouped_expression,
             TokenType.IDENT: self.__parse_identifier,
             TokenType.IF: self.__parse_if_expression,
@@ -420,6 +422,11 @@ class Parser:
 
     def __parse_boolean_literal(self) -> Expressions:
         return BooleanLiteral(value=self.__current_token_is(TokenType.TRUE))
+
+    def __parse_string_literal(self) -> Expressions:
+        s = StringLiteral()
+        s.value = self.current_token.literal
+        return s
 
 
 

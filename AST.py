@@ -20,6 +20,7 @@ class NodeType(Enum):
     # literals
     IntegerLiteral = "IntegerLiteral"
     FloatLiteral = "FloatLiteral"
+    StringLiteral = "StringLiteral"
     IdentifierLiteral = "IdentifierLiteral"
     BooleanLiteral = "BooleanLiteral"
 
@@ -258,6 +259,19 @@ class BooleanLiteral(Expressions):
 
     def type(self) -> NodeType:
         return NodeType.BooleanLiteral
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "value": self.value
+        }
+
+class StringLiteral(Expressions):
+    def __init__(self, value: str = None) -> None:
+        self.value: str = value
+
+    def type(self) -> NodeType:
+        return NodeType.StringLiteral
 
     def json(self) -> dict:
         return {

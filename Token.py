@@ -10,6 +10,7 @@ class TokenType(Enum):
     IDENT = "IDENT"
     INT = "INT"
     FLOAT = "FLOAT"
+    STRING = "STRING"
 
     # arithmetic symbols
     PLUS = "PLUS"

@@ -62,6 +62,37 @@ class Lexer:
         else:
             return self.__new_token(TokenType.FLOAT, float(output))
 
+    def __read_string(self) -> Token:
+        # current_char is '"' when called
+        # consume opening quote
+        self.__read_char()
+
+        start = self.position
+        out = ""
+        while self.current_char is not None and self.current_char != '"':
+            if self.current_char == '\\':
+                # handle simple escape sequences
+                self.__read_char()
+                if self.current_char is None:
+                    break
+                esc = self.current_char
+                if esc == 'n':
+                    out += '\n'
+                elif esc == 't':
+                    out += '\t'
+                else:
+                    out += esc
+                self.__read_char()
+                continue
+
+            out += self.current_char
+            self.__read_char()
+
+        # consume closing quote
+        self.__read_char()
+
+        return self.__new_token(TokenType.STRING, out)
+
     def __read_identifier(self) -> str:
         position = self.position
         while self.current_char is not None and (self.__is_letter(self.current_char) or self.current_char.isalnum()):
@@ -143,6 +174,9 @@ class Lexer:
             case None:
                 tok = self.__new_token(TokenType.EOF, "")
             case _:
+                if self.current_char == '"':
+                    tok = self.__read_string()
+                    return tok
                 if self.__is_letter(self.current_char):
                     literal: str = self.__read_identifier()
                     tt: TokenType = lookup_ident(literal)

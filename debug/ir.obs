@@ -4,11 +4,7 @@ target datalayout = ""
 
 @"true" = constant i1 1
 @"false" = constant i1 0
-define i32 @"test"()
-{
-test_entry:
-  ret i32 1
-}
+declare i32 @"printf"(i8* %".1", i32 %".2")
 
 define i32 @"add"(i32 %"a", i32 %"b")
 {
@@ -23,24 +19,13 @@ add_entry:
   ret i32 %".10"
 }
 
-define float @"divisao"(i32 %"a", i32 %"b")
-{
-divisao_entry:
-  %".4" = alloca i32
-  store i32 %"a", i32* %".4"
-  %".6" = alloca i32
-  store i32 %"b", i32* %".6"
-  %".8" = load i32, i32* %".4"
-  %".9" = load i32, i32* %".6"
-  %".10" = sitofp i32 %".8" to float
-  %".11" = sitofp i32 %".9" to float
-  %".12" = fdiv float %".10", %".11"
-  ret float %".12"
-}
-
-define float @"main"()
+define i32 @"main"()
 {
 main_entry:
-  %".2" = call float @"divisao"(i32 5, i32 2)
-  ret float %".2"
+  %".2" = bitcast [9 x i8]* @".str0" to i8*
+  %".3" = call i32 @"add"(i32 2, i32 3)
+  %".4" = call i32 @"printf"(i8* %".2", i32 %".3")
+  ret i32 0
 }
+
+@".str0" = constant [9 x i8] [i8 116, i8 101, i8 115, i8 116, i8 101, i8 32, i8 37, i8 102, i8 0]

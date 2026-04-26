@@ -19,6 +19,9 @@ class Compiler:
 
         self.env: Environment = Environment()
 
+        # counter for unique string constants
+        self._str_const_count: int = 0
+
         self.errors: list[str] = []
 
         self.__initialize_builtins()
@@ -40,6 +43,12 @@ class Compiler:
         true_var, false_var = __init_booleans()
         self.env.define("true", true_var, true_var.type)
         self.env.define("false", false_var, false_var.type)
+
+        # declare a C-like printf: int printf(i8*, i32)
+        i8ptr = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [i8ptr, ir.IntType(32)])
+        printf_func = ir.Function(self.module, printf_ty, name="printf")
+        self.env.define("printf", printf_func, printf_func.function_type.return_type)
 
     def compile(self, node: Node) -> None:
         match node.type():
@@ -320,6 +329,26 @@ class Compiler:
             case NodeType.BooleanLiteral:
                 node: BooleanLiteral = node
                 return ir.Constant(ir.IntType(1), int(node.value)), ir.IntType(1)
+
+            case NodeType.StringLiteral:
+                node = node
+                # create a global constant for the string
+                raw: bytes = (node.value + "\0").encode('utf8')
+                array_ty = ir.ArrayType(ir.IntType(8), len(raw))
+                elems = [ir.Constant(ir.IntType(8), b) for b in raw]
+                const = ir.Constant(array_ty, elems)
+
+                name = f".str{self._str_const_count}"
+                self._str_const_count += 1
+
+                gvar = ir.GlobalVariable(self.module, array_ty, name=name)
+                gvar.global_constant = True
+                gvar.initializer = const
+
+                # get i8* pointer to the first char
+                ptr = self.builder.bitcast(gvar, ir.IntType(8).as_pointer())
+
+                return ptr, ir.IntType(8).as_pointer()
 
             # expression value
             case NodeType.InfixExpression:

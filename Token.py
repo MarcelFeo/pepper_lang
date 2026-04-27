@@ -49,6 +49,7 @@ class TokenType(Enum):
     ELSE = "ELSE"
     TRUE = "TRUE"
     FALSE = "FALSE"
+    WHILE = "WHILE"
 
     # typing
     TYPE = "TYPE"
@@ -75,6 +76,7 @@ KEYWORDS: dict[str, TokenType] = {
     "return": TokenType.RETURN,
     "if": TokenType.IF,
     "else": TokenType.ELSE,
+    "while": TokenType.WHILE,
     "true": TokenType.TRUE,
     "false": TokenType.FALSE
 }

@@ -110,83 +110,82 @@ class Lexer:
 
         self.__skip_whitespace()
 
-        match self.current_char:
-            case '+':
-                tok = self.__new_token(TokenType.PLUS, self.current_char)
-            case '-':
-                if self.__peek_char() == '>':
-                    self.__read_char()  # consome o '>'
-                    tok = self.__new_token(TokenType.EQ, "->")
-                else:
-                    tok = self.__new_token(TokenType.MINUS, self.current_char)
-            case '*':
-                tok = self.__new_token(TokenType.ASTERISK, self.current_char)
-            case '/':
-                tok = self.__new_token(TokenType.SLASH, self.current_char)
-            case '^':
-                tok = self.__new_token(TokenType.POW, self.current_char)
-            case '%':
-                tok = self.__new_token(TokenType.MODULUS, self.current_char)
-            case '<':
-                if self.__peek_char() == '=':
-                    ch = self.current_char
-                    self.__read_char()  # consome o '='
-                    tok = self.__new_token(TokenType.LT_EQ, ch + self.current_char)
-                else:
-                    tok = self.__new_token(TokenType.LT, self.current_char)
-            case '>':
-                if self.__peek_char() == '=':
-                    ch = self.current_char
-                    self.__read_char()  # consome o '='
-                    tok = self.__new_token(TokenType.GT_EQ, ch + self.current_char)
-                else:
-                    tok = self.__new_token(TokenType.GT, self.current_char)
-            case '=':
-                if self.__peek_char() == '=':
-                    ch = self.current_char
-                    self.__read_char()  # consome o '='
-                    tok = self.__new_token(TokenType.EQ_EQ, ch + self.current_char)
-                else:
-                    tok = self.__new_token(TokenType.EQ, self.current_char)
-            case '!':
-                if self.__peek_char() == '=':
-                    ch = self.current_char
-                    self.__read_char()  # consome o '='
-                    tok = self.__new_token(TokenType.NOT_EQ, ch + self.current_char)
-                else:
-                    tok = self.__new_token(TokenType.ILLEGAL, self.current_char)
-            case '$':
-                tok = self.__new_token(TokenType.COLON, self.current_char)
-            case ':':
-                tok = self.__new_token(TokenType.ARROW, self.current_char)
-            case ',':
-                tok = self.__new_token(TokenType.COMMA, self.current_char)
-            case ';':
-                tok = self.__new_token(TokenType.SEMICOLON, self.current_char)
-            case '(':
-                tok = self.__new_token(TokenType.LPAREN, self.current_char)
-            case ')':
-                tok = self.__new_token(TokenType.RPAREN, self.current_char)
-            case '{':
-                tok = self.__new_token(TokenType.LBRACE, self.current_char)
-            case '}':
-                tok = self.__new_token(TokenType.RBRACE, self.current_char)
-            case None:
-                tok = self.__new_token(TokenType.EOF, "")
-            case _:
-                if self.current_char == '"':
-                    tok = self.__read_string()
-                    return tok
-                if self.__is_letter(self.current_char):
-                    literal: str = self.__read_identifier()
-                    tt: TokenType = lookup_ident(literal)
-                    tok = self.__new_token(tt=tt, literal=literal)
-                    return tok
-                elif self.__is_digit(self.current_char):
-                    tok = self.__read_number()
-                    return tok
-                else:
-                    tok = self.__new_token(TokenType.ILLEGAL, self.current_char)
+        if self.current_char == '+':
+            tok = self.__new_token(TokenType.PLUS, self.current_char)
+        elif self.current_char == '-':
+            if self.__peek_char() == '>':
+                self.__read_char()  # consome o '>'
+                tok = self.__new_token(TokenType.EQ, "->")
+            else:
+                tok = self.__new_token(TokenType.MINUS, self.current_char)
+        elif self.current_char == '*':
+            tok = self.__new_token(TokenType.ASTERISK, self.current_char)
+        elif self.current_char == '/':
+            tok = self.__new_token(TokenType.SLASH, self.current_char)
+        elif self.current_char == '^':
+            tok = self.__new_token(TokenType.POW, self.current_char)
+        elif self.current_char == '%':
+            tok = self.__new_token(TokenType.MODULUS, self.current_char)
+        elif self.current_char == '<':
+            if self.__peek_char() == '=':
+                ch = self.current_char
+                self.__read_char()  # consome o '='
+                tok = self.__new_token(TokenType.LT_EQ, ch + self.current_char)
+            else:
+                tok = self.__new_token(TokenType.LT, self.current_char)
+        elif self.current_char == '>':
+            if self.__peek_char() == '=':
+                ch = self.current_char
+                self.__read_char()  # consome o '='
+                tok = self.__new_token(TokenType.GT_EQ, ch + self.current_char)
+            else:
+                tok = self.__new_token(TokenType.GT, self.current_char)
+        elif self.current_char == '=':
+            if self.__peek_char() == '=':
+                ch = self.current_char
+                self.__read_char()  # consome o '='
+                tok = self.__new_token(TokenType.EQ_EQ, ch + self.current_char)
+            else:
+                tok = self.__new_token(TokenType.EQ, self.current_char)
+        elif self.current_char == '!':
+            if self.__peek_char() == '=':
+                ch = self.current_char
+                self.__read_char()  # consome o '='
+                tok = self.__new_token(TokenType.NOT_EQ, ch + self.current_char)
+            else:
+                tok = self.__new_token(TokenType.ILLEGAL, self.current_char)
+        elif self.current_char == '$':
+            tok = self.__new_token(TokenType.COLON, self.current_char)
+        elif self.current_char == ':':
+            tok = self.__new_token(TokenType.ARROW, self.current_char)
+        elif self.current_char == ',':
+            tok = self.__new_token(TokenType.COMMA, self.current_char)
+        elif self.current_char == ';':
+            tok = self.__new_token(TokenType.SEMICOLON, self.current_char)
+        elif self.current_char == '(':
+            tok = self.__new_token(TokenType.LPAREN, self.current_char)
+        elif self.current_char == ')':
+            tok = self.__new_token(TokenType.RPAREN, self.current_char)
+        elif self.current_char == '{':
+            tok = self.__new_token(TokenType.LBRACE, self.current_char)
+        elif self.current_char == '}':
+            tok = self.__new_token(TokenType.RBRACE, self.current_char)
+        elif self.current_char is None:
+            tok = self.__new_token(TokenType.EOF, "")
+        else:
+            if self.current_char == '"':
+                tok = self.__read_string()
+                return tok
+            if self.__is_letter(self.current_char):
+                literal: str = self.__read_identifier()
+                tt: TokenType = lookup_ident(literal)
+                tok = self.__new_token(tt=tt, literal=literal)
+                return tok
+            elif self.__is_digit(self.current_char):
+                tok = self.__read_number()
+                return tok
+            else:
+                tok = self.__new_token(TokenType.ILLEGAL, self.current_char)
 
         self.__read_char()
         return tok

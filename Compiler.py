@@ -2,6 +2,7 @@ from llvmlite import ir
 
 from AST import NodeType, Node, Statements, Expressions, Program, ExpressionStatement, LetStatement, InfixExpression, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
 from AST import FunctionStatement, FunctionParameter, BlockStatement, ReturnStatement, CallExpression, BooleanLiteral, IfStatement
+from AST import WhileStatement
 
 from Environment import Environment
 
@@ -51,31 +52,29 @@ class Compiler:
         self.env.define("printf", printf_func, printf_func.function_type.return_type)
 
     def compile(self, node: Node) -> None:
-        match node.type():
-            case NodeType.Program:
-                self.__visit_program(node)
-
-            # statements
-            case NodeType.ExpressionStatement:
-                self.__visit_expression_statement(node)
-            case NodeType.LetStatement:
-                self.__visit_let_statement(node)
-            case NodeType.FunctionStatement:
-                self.__visit_function_statement(node)
-            case NodeType.BlockStatement:
-                self.__visit_block_statement(node)
-            case NodeType.ReturnStatement:
-                self.__visit_return_statement(node)
-            case NodeType.AssignmentStatement:
-                self.__visit_assign_statement(node)
-            case NodeType.IfStatement:
-                self.__visit_if_statement(node)
-
-            # expressions
-            case NodeType.InfixExpression:
-                self.__visit_infix_expression(node)
-            case NodeType.CallExpression:
-                self.__visit_call_expression(node)
+        t = node.type()
+        if t == NodeType.Program:
+            self.__visit_program(node)
+        elif t == NodeType.ExpressionStatement:
+            self.__visit_expression_statement(node)
+        elif t == NodeType.LetStatement:
+            self.__visit_let_statement(node)
+        elif t == NodeType.FunctionStatement:
+            self.__visit_function_statement(node)
+        elif t == NodeType.BlockStatement:
+            self.__visit_block_statement(node)
+        elif t == NodeType.ReturnStatement:
+            self.__visit_return_statement(node)
+        elif t == NodeType.AssignmentStatement:
+            self.__visit_assign_statement(node)
+        elif t == NodeType.IfStatement:
+            self.__visit_if_statement(node)
+        elif t == NodeType.WhileStatement:
+            self.__visit_while_statement(node)
+        elif t == NodeType.InfixExpression:
+            self.__visit_infix_expression(node)
+        elif t == NodeType.CallExpression:
+            self.__visit_call_expression(node)
 
     # visit method
     def __visit_program(self, node: Program) -> None:
@@ -213,6 +212,38 @@ class Compiler:
             with self.builder.if_then(test):
                 self.compile(consequence)
 
+    def __visit_while_statement(self, node: WhileStatement) -> None:
+        condition = node.condition
+        body = node.body
+
+        # current function
+        try:
+            func = self.builder.block.function
+        except Exception:
+            raise Exception("While statement not inside a function")
+
+        # create basic blocks
+        loop_cond = func.append_basic_block("while_cond")
+        loop_body = func.append_basic_block("while_body")
+        loop_end = func.append_basic_block("while_end")
+
+        # jump to condition first
+        self.builder.branch(loop_cond)
+
+        # condition
+        self.builder.position_at_end(loop_cond)
+        test, _ = self.__resolve_value(node=condition)
+        self.builder.cbranch(test, loop_body, loop_end)
+
+        # body
+        self.builder.position_at_end(loop_body)
+        self.compile(body)
+        # after body, jump back to condition
+        self.builder.branch(loop_cond)
+
+        # continue after loop
+        self.builder.position_at_end(loop_end)
+
     # expressions
     def __visit_infix_expression(self, node: InfixExpression) -> tuple[ir.Value, ir.Type]:
         operator: str = node.operator
@@ -223,72 +254,70 @@ class Compiler:
         Type = None
         if isinstance(right_type, ir.IntType) and isinstance(left_type, ir.IntType):
             Type = self.type_map['int']
-            match operator:
-                case '+':
-                    value = self.builder.add(left_value, right_value)
-                case '-':
-                    value = self.builder.sub(left_value, right_value)
-                case '*':
-                    value = self.builder.mul(left_value, right_value)
-                case '/':
-                    # promote integer division to float division so expressions
-                    # like `5 / 2` can produce `2.5` when used in float contexts.
-                    left_fp = self.builder.sitofp(left_value, ir.FloatType())
-                    right_fp = self.builder.sitofp(right_value, ir.FloatType())
-                    value = self.builder.fdiv(left_fp, right_fp)
-                    Type = ir.FloatType()
-                case '%':
-                    value = self.builder.srem(left_value, right_value)
-                case '**':
-                    # TODO:
-                    pass
-                case '<':
-                    value = self.builder.icmp_signed('<', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '<=':
-                    value = self.builder.icmp_signed('<=', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '>':
-                    value = self.builder.icmp_signed('>', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '>=':
-                    value = self.builder.icmp_signed('>=', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '==':
-                    value = self.builder.icmp_signed('==', left_value, right_value)
-                    Type = ir.IntType(1)
+            if operator == '+':
+                value = self.builder.add(left_value, right_value)
+            elif operator == '-':
+                value = self.builder.sub(left_value, right_value)
+            elif operator == '*':
+                value = self.builder.mul(left_value, right_value)
+            elif operator == '/':
+                # promote integer division to float division so expressions
+                # like `5 / 2` can produce `2.5` when used in float contexts.
+                left_fp = self.builder.sitofp(left_value, ir.FloatType())
+                right_fp = self.builder.sitofp(right_value, ir.FloatType())
+                value = self.builder.fdiv(left_fp, right_fp)
+                Type = ir.FloatType()
+            elif operator == '%':
+                value = self.builder.srem(left_value, right_value)
+            elif operator == '**':
+                # TODO:
+                pass
+            elif operator == '<':
+                value = self.builder.icmp_signed('<', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '<=':
+                value = self.builder.icmp_signed('<=', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '>':
+                value = self.builder.icmp_signed('>', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '>=':
+                value = self.builder.icmp_signed('>=', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '==':
+                value = self.builder.icmp_signed('==', left_value, right_value)
+                Type = ir.IntType(1)
 
         elif isinstance(right_type, ir.FloatType) and isinstance(left_type, ir.FloatType):
             Type = ir.FloatType()
-            match operator:
-                case '+':
-                    value = self.builder.fadd(left_value, right_value)
-                case '-':
-                    value = self.builder.fsub(left_value, right_value)
-                case '*':
-                    value = self.builder.fmul(left_value, right_value)
-                case '/':
-                    value = self.builder.fdiv(left_value, right_value)
-                case '%':
-                    value = self.builder.frem(left_value, right_value)
-                case '**':
-                    # TODO:
-                    pass
-                case '<':
-                    value = self.builder.fcmp_ordered('<', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '<=':
-                    value = self.builder.fcmp_ordered('<=', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '>':
-                    value = self.builder.fcmp_ordered('>', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '>=':
-                    value = self.builder.fcmp_ordered('>=', left_value, right_value)
-                    Type = ir.IntType(1)
-                case '==':
-                    value = self.builder.fcmp_ordered('==', left_value, right_value)
-                    Type = ir.IntType(1)
+            if operator == '+':
+                value = self.builder.fadd(left_value, right_value)
+            elif operator == '-':
+                value = self.builder.fsub(left_value, right_value)
+            elif operator == '*':
+                value = self.builder.fmul(left_value, right_value)
+            elif operator == '/':
+                value = self.builder.fdiv(left_value, right_value)
+            elif operator == '%':
+                value = self.builder.frem(left_value, right_value)
+            elif operator == '**':
+                # TODO:
+                pass
+            elif operator == '<':
+                value = self.builder.fcmp_ordered('<', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '<=':
+                value = self.builder.fcmp_ordered('<=', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '>':
+                value = self.builder.fcmp_ordered('>', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '>=':
+                value = self.builder.fcmp_ordered('>=', left_value, right_value)
+                Type = ir.IntType(1)
+            elif operator == '==':
+                value = self.builder.fcmp_ordered('==', left_value, right_value)
+                Type = ir.IntType(1)
 
         return value, Type
 
@@ -304,55 +333,50 @@ class Compiler:
             args.append(val)
             types.append(Type)
 
-        match name:
-            case _:
-                func, ret_type = self.env.lookup(name)
-                ret = self.builder.call(func, args)
+        func, ret_type = self.env.lookup(name)
+        ret = self.builder.call(func, args)
 
         return ret, ret_type
 
     # helpers methods
     def __resolve_value(self, node: Expressions) -> tuple[ir.Value, ir.Type]:
-        match node.type():
-            case NodeType.IntegerLiteral:
-                node: IntegerLiteral = node
-                value, Type = node.value, self.type_map['int']
-                return ir.Constant(Type, value), Type
-            case NodeType.FloatLiteral:
-                node: FloatLiteral = node
-                value, Type = node.value, self.type_map['float']
-                return ir.Constant(Type, value), Type
-            case NodeType.IdentifierLiteral:
-                node: IdentifierLiteral = node
-                ptr, Type = self.env.lookup(node.value)
-                return self.builder.load(ptr), Type
-            case NodeType.BooleanLiteral:
-                node: BooleanLiteral = node
-                return ir.Constant(ir.IntType(1), int(node.value)), ir.IntType(1)
+        t = node.type()
+        if t == NodeType.IntegerLiteral:
+            node: IntegerLiteral = node
+            value, Type = node.value, self.type_map['int']
+            return ir.Constant(Type, value), Type
+        elif t == NodeType.FloatLiteral:
+            node: FloatLiteral = node
+            value, Type = node.value, self.type_map['float']
+            return ir.Constant(Type, value), Type
+        elif t == NodeType.IdentifierLiteral:
+            node: IdentifierLiteral = node
+            ptr, Type = self.env.lookup(node.value)
+            return self.builder.load(ptr), Type
+        elif t == NodeType.BooleanLiteral:
+            node: BooleanLiteral = node
+            return ir.Constant(ir.IntType(1), int(node.value)), ir.IntType(1)
+        elif t == NodeType.StringLiteral:
+            node = node
+            # create a global constant for the string
+            raw: bytes = (node.value + "\0").encode('utf8')
+            array_ty = ir.ArrayType(ir.IntType(8), len(raw))
+            elems = [ir.Constant(ir.IntType(8), b) for b in raw]
+            const = ir.Constant(array_ty, elems)
 
-            case NodeType.StringLiteral:
-                node = node
-                # create a global constant for the string
-                raw: bytes = (node.value + "\0").encode('utf8')
-                array_ty = ir.ArrayType(ir.IntType(8), len(raw))
-                elems = [ir.Constant(ir.IntType(8), b) for b in raw]
-                const = ir.Constant(array_ty, elems)
+            name = f".str{self._str_const_count}"
+            self._str_const_count += 1
 
-                name = f".str{self._str_const_count}"
-                self._str_const_count += 1
+            gvar = ir.GlobalVariable(self.module, array_ty, name=name)
+            gvar.global_constant = True
+            gvar.initializer = const
 
-                gvar = ir.GlobalVariable(self.module, array_ty, name=name)
-                gvar.global_constant = True
-                gvar.initializer = const
+            # get i8* pointer to the first char
+            ptr = self.builder.bitcast(gvar, ir.IntType(8).as_pointer())
 
-                # get i8* pointer to the first char
-                ptr = self.builder.bitcast(gvar, ir.IntType(8).as_pointer())
-
-                return ptr, ir.IntType(8).as_pointer()
-
-            # expression value
-            case NodeType.InfixExpression:
-                # typo fixed: should call __visit_infix_expression
-                return self.__visit_infix_expression(node)
-            case NodeType.CallExpression:
-                return self.__visit_call_expression(node)
+            return ptr, ir.IntType(8).as_pointer()
+        elif t == NodeType.InfixExpression:
+            # typo fixed: should call __visit_infix_expression
+            return self.__visit_infix_expression(node)
+        elif t == NodeType.CallExpression:
+            return self.__visit_call_expression(node)

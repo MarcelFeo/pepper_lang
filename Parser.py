@@ -4,7 +4,7 @@ from typing import Callable
 from enum import Enum, auto
 
 from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpression, LetStatement, IntegerLiteral, FloatLiteral, IdentifierLiteral, AssignmentStatement
-from AST import IfStatement, BooleanLiteral, CallExpression
+from AST import IfStatement, BooleanLiteral, CallExpression, WhileStatement
 from AST import StringLiteral
 from AST import FunctionStatement, BlockStatement, ReturnStatement, FunctionParameter
 
@@ -133,15 +133,16 @@ class Parser:
         if self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
             return self.__parse_assignment_statement()
 
-        match self.current_token.type:
-            case TokenType.LET:
-                return self.__parse_let_statement()
-            case TokenType.FN:
-                return self.__parse_function_statement()
-            case TokenType.RETURN:
-                return self.__parse_return_statement()
-            case _:
-                return self.__parse_expression_statement()
+        if self.current_token.type == TokenType.LET:
+            return self.__parse_let_statement()
+        elif self.current_token.type == TokenType.FN:
+            return self.__parse_function_statement()
+        elif self.current_token.type == TokenType.WHILE:
+            return self.__parse_while_statement()
+        elif self.current_token.type == TokenType.RETURN:
+            return self.__parse_return_statement()
+        else:
+            return self.__parse_expression_statement()
 
 
     def __parse_expression_statement(self) -> ExpressionStatement:
@@ -329,6 +330,20 @@ class Parser:
             alternative = self.__parse_block_statement()
 
         return IfStatement(condition=condition, consequence=consequence, alternative=alternative)
+
+    def __parse_while_statement(self) -> WhileStatement:
+        condition: Expressions = None
+        body: BlockStatement = None
+
+        self.__next_token()  # consume 'while'
+        condition = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        if not self.__expect_peek(TokenType.LBRACE):
+            return None
+
+        body = self.__parse_block_statement()
+
+        return WhileStatement(condition=condition, body=body)
 
     # expression methods
     def __parse_expression(self, precedence: PrecedenceType) -> Expressions:

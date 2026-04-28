@@ -13,6 +13,9 @@ class NodeType(Enum):
     AssignmentStatement = "AssignmentStatement"
     IfStatement = "IfStatement"
     WhileStatement = "WhileStatement"
+    ForStatement = "ForStatement"
+    BreakStatement = "BreakStatement"
+    ContinueStatement = "ContinueStatement"
 
     # expressions
     InfixExpression = "InfixExpression"
@@ -196,6 +199,48 @@ class WhileStatement(Statements):
             "condition": self.condition.json(),
             "body": self.body.json()
         }
+
+
+class ForStatement(Statements):
+    def __init__(self, init: Statements = None, condition: Expressions = None, post: Statements = None, body: BlockStatement = None) -> None:
+        self.init = init
+        self.condition = condition
+        self.post = post
+        self.body = body
+
+    def type(self) -> NodeType:
+        return NodeType.ForStatement
+
+    def json(self) -> dict:
+        return {
+            "type": self.type().value,
+            "init": self.init.json() if self.init is not None else None,
+            "condition": self.condition.json() if self.condition is not None else None,
+            "post": self.post.json() if self.post is not None else None,
+            "body": self.body.json()
+        }
+
+
+class BreakStatement(Statements):
+    def __init__(self) -> None:
+        pass
+
+    def type(self) -> NodeType:
+        return NodeType.BreakStatement
+
+    def json(self) -> dict:
+        return {"type": self.type().value}
+
+
+class ContinueStatement(Statements):
+    def __init__(self) -> None:
+        pass
+
+    def type(self) -> NodeType:
+        return NodeType.ContinueStatement
+
+    def json(self) -> dict:
+        return {"type": self.type().value}
 
 # expressions
 class InfixExpression(Expressions):

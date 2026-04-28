@@ -20,6 +20,10 @@ class Compiler:
 
         self.env: Environment = Environment()
 
+        # stacks to keep track of current loop targets for break/continue
+        self._loop_end_stack: list[ir.Block] = []
+        self._loop_continue_stack: list[ir.Block] = []
+
         # counter for unique string constants
         self._str_const_count: int = 0
 
@@ -71,6 +75,12 @@ class Compiler:
             self.__visit_if_statement(node)
         elif t == NodeType.WhileStatement:
             self.__visit_while_statement(node)
+        elif t == NodeType.ForStatement:
+            self.__visit_for_statement(node)
+        elif t == NodeType.BreakStatement:
+            self.__visit_break_statement(node)
+        elif t == NodeType.ContinueStatement:
+            self.__visit_continue_statement(node)
         elif t == NodeType.InfixExpression:
             self.__visit_infix_expression(node)
         elif t == NodeType.CallExpression:
@@ -235,14 +245,108 @@ class Compiler:
         test, _ = self.__resolve_value(node=condition)
         self.builder.cbranch(test, loop_body, loop_end)
 
+        # push loop targets for break/continue
+        self._loop_end_stack.append(loop_end)
+        self._loop_continue_stack.append(loop_cond)
+
         # body
         self.builder.position_at_end(loop_body)
         self.compile(body)
         # after body, jump back to condition
-        self.builder.branch(loop_cond)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(loop_cond)
+
+        # pop loop targets
+        self._loop_end_stack.pop()
+        self._loop_continue_stack.pop()
 
         # continue after loop
         self.builder.position_at_end(loop_end)
+
+    def __visit_for_statement(self, node: "ForStatement") -> None:
+        init = node.init
+        condition = node.condition
+        post = node.post
+        body = node.body
+
+        try:
+            func = self.builder.block.function
+        except Exception:
+            raise Exception("For statement not inside a function")
+
+        # compile init
+        if init is not None:
+            self.compile(init)
+
+        # create basic blocks
+        loop_cond = func.append_basic_block("for_cond")
+        loop_body = func.append_basic_block("for_body")
+        loop_post = func.append_basic_block("for_post")
+        loop_end = func.append_basic_block("for_end")
+
+        # jump to condition first
+        self.builder.branch(loop_cond)
+
+        # condition
+        self.builder.position_at_end(loop_cond)
+        if condition is not None:
+            test, _ = self.__resolve_value(node=condition)
+            self.builder.cbranch(test, loop_body, loop_end)
+        else:
+            self.builder.branch(loop_body)
+
+        # push loop targets
+        self._loop_end_stack.append(loop_end)
+        self._loop_continue_stack.append(loop_post)
+
+        # body
+        self.builder.position_at_end(loop_body)
+        self.compile(body)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(loop_post)
+
+        # post
+        self.builder.position_at_end(loop_post)
+        if post is not None:
+            self.compile(post)
+        self.builder.branch(loop_cond)
+
+        # pop loop targets
+        self._loop_end_stack.pop()
+        self._loop_continue_stack.pop()
+
+        # continue after loop
+        self.builder.position_at_end(loop_end)
+
+    def __visit_break_statement(self, node: "BreakStatement") -> None:
+        if len(self._loop_end_stack) == 0:
+            raise Exception("'break' used outside of loop")
+
+        target = self._loop_end_stack[-1]
+        self.builder.branch(target)
+
+        # create an unreachable continuation block to keep generating
+        try:
+            func = self.builder.block.function
+            cont = func.append_basic_block("after_break")
+            self.builder.position_at_end(cont)
+        except Exception:
+            pass
+
+    def __visit_continue_statement(self, node: "ContinueStatement") -> None:
+        if len(self._loop_continue_stack) == 0:
+            raise Exception("'continue' used outside of loop")
+
+        target = self._loop_continue_stack[-1]
+        self.builder.branch(target)
+
+        # create an unreachable continuation block to keep generating
+        try:
+            func = self.builder.block.function
+            cont = func.append_basic_block("after_continue")
+            self.builder.position_at_end(cont)
+        except Exception:
+            pass
 
     # expressions
     def __visit_infix_expression(self, node: InfixExpression) -> tuple[ir.Value, ir.Type]:

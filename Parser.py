@@ -7,6 +7,7 @@ from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpr
 from AST import IfStatement, BooleanLiteral, CallExpression, WhileStatement
 from AST import StringLiteral
 from AST import FunctionStatement, BlockStatement, ReturnStatement, FunctionParameter
+from AST import ForStatement, BreakStatement, ContinueStatement
 
 # precedence types
 class PrecedenceType(Enum):
@@ -120,6 +121,7 @@ class Parser:
         program = Program()
 
         while self.current_token.type != TokenType.EOF:
+
             stmt = self.__parse_statement()
             if stmt is not None:
                 program.statements.append(stmt)
@@ -139,6 +141,12 @@ class Parser:
             return self.__parse_function_statement()
         elif self.current_token.type == TokenType.WHILE:
             return self.__parse_while_statement()
+        elif self.current_token.type == TokenType.FOR:
+            return self.__parse_for_statement()
+        elif self.current_token.type == TokenType.BREAK:
+            return self.__parse_break_statement()
+        elif self.current_token.type == TokenType.CONTINUE:
+            return self.__parse_continue_statement()
         elif self.current_token.type == TokenType.RETURN:
             return self.__parse_return_statement()
         else:
@@ -223,8 +231,9 @@ class Parser:
 
         if not self.__expect_peek(TokenType.LBRACE):
             return None
-
         stmt.body = self.__parse_block_statement()
+
+
 
         return stmt
 
@@ -263,8 +272,16 @@ class Parser:
             param.param_type = self.current_token.literal
             params.append(param)
 
-        if not self.__expect_peek(TokenType.RPAREN):
-            return None
+
+
+        # current_token may already be RPAREN (assignment parsed it),
+        # so handle both cases
+        if not self.__current_token_is(TokenType.RPAREN):
+            if self.__peek_token_is(TokenType.RPAREN):
+                self.__next_token()
+            else:
+                self.__peek_error(TokenType.RPAREN)
+                return None
 
         return params
 
@@ -344,6 +361,98 @@ class Parser:
         body = self.__parse_block_statement()
 
         return WhileStatement(condition=condition, body=body)
+
+    def __parse_break_statement(self) -> BreakStatement:
+        # consume 'break' and advance to semicolon
+        self.__next_token()
+
+        while not self.__current_token_is(TokenType.SEMICOLON) and not self.__current_token_is(TokenType.EOF):
+            self.__next_token()
+
+        return BreakStatement()
+
+    def __parse_continue_statement(self) -> ContinueStatement:
+        # consume 'continue' and advance to semicolon
+        self.__next_token()
+
+        while not self.__current_token_is(TokenType.SEMICOLON) and not self.__current_token_is(TokenType.EOF):
+            self.__next_token()
+
+        return ContinueStatement()
+
+    def __parse_for_statement(self) -> ForStatement:
+        # expect '(' after 'for'
+        if not self.__expect_peek(TokenType.LPAREN):
+            return None
+
+        # move into the parentheses
+        self.__next_token()
+
+
+        init = None
+        # parse init statement if present
+        if not self.__current_token_is(TokenType.SEMICOLON):
+            if self.current_token.type == TokenType.LET:
+                init = self.__parse_let_statement()
+
+            elif self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+                init = self.__parse_assignment_statement()
+
+            else:
+                init = self.__parse_expression_statement()
+
+
+        # ensure current token is semicolon; if parse left it at semicolon it's fine,
+        # otherwise try to advance to semicolon
+        if not self.__current_token_is(TokenType.SEMICOLON):
+            if self.__peek_token_is(TokenType.SEMICOLON):
+                self.__next_token()
+            else:
+                self.__peek_error(TokenType.SEMICOLON)
+                return None
+
+        # move to first token of condition
+        self.__next_token()
+
+
+        condition = None
+        if not self.__current_token_is(TokenType.COMMA):
+            condition = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        # expect comma separating condition and post
+        if not self.__expect_peek(TokenType.COMMA):
+            return None
+
+
+
+        # move to first token of post
+        self.__next_token()
+
+
+        post = None
+        if not self.__current_token_is(TokenType.RPAREN):
+            if self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+                post = self.__parse_assignment_statement()
+            else:
+                post = self.__parse_expression_statement()
+
+
+        # current_token may already be RPAREN (assignment parsed it), handle both
+        if not self.__current_token_is(TokenType.RPAREN):
+            if self.__peek_token_is(TokenType.RPAREN):
+                self.__next_token()
+            else:
+                self.__peek_error(TokenType.RPAREN)
+                return None
+
+        if not self.__expect_peek(TokenType.LBRACE):
+            return None
+
+        body = self.__parse_block_statement()
+
+
+
+        return ForStatement(init=init, condition=condition, post=post, body=body)
 
     # expression methods
     def __parse_expression(self, precedence: PrecedenceType) -> Expressions:

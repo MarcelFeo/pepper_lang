@@ -111,21 +111,40 @@ class Lexer:
         self.__skip_whitespace()
 
         if self.current_char == '+':
-            tok = self.__new_token(TokenType.PLUS, self.current_char)
+            if self.__peek_char() == '=':
+                self.__read_char()
+                tok = self.__new_token(TokenType.PLUS_EQ, '+=' )
+            else:
+                tok = self.__new_token(TokenType.PLUS, self.current_char)
         elif self.current_char == '-':
             if self.__peek_char() == '>':
                 self.__read_char()  # consome o '>'
                 tok = self.__new_token(TokenType.EQ, "->")
+            elif self.__peek_char() == '=':
+                self.__read_char()
+                tok = self.__new_token(TokenType.MINUS_EQ, '-=')
             else:
                 tok = self.__new_token(TokenType.MINUS, self.current_char)
         elif self.current_char == '*':
-            tok = self.__new_token(TokenType.ASTERISK, self.current_char)
+            if self.__peek_char() == '=':
+                self.__read_char()
+                tok = self.__new_token(TokenType.ASTERISK_EQ, '*=')
+            else:
+                tok = self.__new_token(TokenType.ASTERISK, self.current_char)
         elif self.current_char == '/':
-            tok = self.__new_token(TokenType.SLASH, self.current_char)
+            if self.__peek_char() == '=':
+                self.__read_char()
+                tok = self.__new_token(TokenType.SLASH_EQ, '/=')
+            else:
+                tok = self.__new_token(TokenType.SLASH, self.current_char)
         elif self.current_char == '^':
             tok = self.__new_token(TokenType.POW, self.current_char)
         elif self.current_char == '%':
-            tok = self.__new_token(TokenType.MODULUS, self.current_char)
+            if self.__peek_char() == '=':
+                self.__read_char()
+                tok = self.__new_token(TokenType.MODULUS_EQ, '%=')
+            else:
+                tok = self.__new_token(TokenType.MODULUS, self.current_char)
         elif self.current_char == '<':
             if self.__peek_char() == '=':
                 ch = self.current_char
@@ -153,7 +172,7 @@ class Lexer:
                 self.__read_char()  # consome o '='
                 tok = self.__new_token(TokenType.NOT_EQ, ch + self.current_char)
             else:
-                tok = self.__new_token(TokenType.ILLEGAL, self.current_char)
+                tok = self.__new_token(TokenType.BANG, self.current_char)
         elif self.current_char == '$':
             tok = self.__new_token(TokenType.COLON, self.current_char)
         elif self.current_char == ':':

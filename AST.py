@@ -19,6 +19,7 @@ class NodeType(Enum):
 
     # expressions
     InfixExpression = "InfixExpression"
+    PrefixExpression = "PrefixExpression"
     CallExpression = "CallExpression"
 
     # literals
@@ -273,6 +274,22 @@ class CallExpression(Expressions):
             "type": self.type().value,
             "function": self.function.json(),
             "arguments": [arg.json() for arg in self.arguments]
+        }
+
+# prefix expression
+class PrefixExpression(Expressions):
+    def __init__(self, operator: str = None, right_node: Expressions = None) -> None:
+        self.operator: str = operator
+        self.right_node: Expressions = right_node
+
+    def type(self) -> NodeType:
+        return NodeType.PrefixExpression
+
+    def json(self) -> dict:
+        return {
+            "type": "PrefixExpression",
+            "operator": self.operator,
+            "right_node": self.right_node.json() if self.right_node is not None else None
         }
 
 # literals

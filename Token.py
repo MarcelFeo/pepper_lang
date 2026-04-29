@@ -19,9 +19,16 @@ class TokenType(Enum):
     SLASH = "SLASH"
     POW = "POW"
     MODULUS = "MODULUS"
+    # unary
+    BANG = "BANG"
 
     # assignemt symbols
     EQ = "EQ"
+    PLUS_EQ = "PLUS_EQ"
+    MINUS_EQ = "MINUS_EQ"
+    ASTERISK_EQ = "ASTERISK_EQ"
+    SLASH_EQ = "SLASH_EQ"
+    MODULUS_EQ = "MODULUS_EQ"
 
     # comparison symbols
     LT = '<'

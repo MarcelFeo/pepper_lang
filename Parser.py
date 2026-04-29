@@ -7,7 +7,7 @@ from AST import Statements, Expressions, Program, ExpressionStatement, InfixExpr
 from AST import IfStatement, BooleanLiteral, CallExpression, WhileStatement
 from AST import StringLiteral
 from AST import FunctionStatement, BlockStatement, ReturnStatement, FunctionParameter
-from AST import ForStatement, BreakStatement, ContinueStatement
+from AST import ForStatement, BreakStatement, ContinueStatement, PrefixExpression
 
 # precedence types
 class PrecedenceType(Enum):
@@ -38,6 +38,9 @@ PRECEDENCE: dict[TokenType, PrecedenceType] = {
     TokenType.LPAREN: PrecedenceType.P_CALL
 }
 
+# tokens that act as assignment operators
+ASSIGN_TOKENS = {TokenType.EQ, TokenType.PLUS_EQ, TokenType.MINUS_EQ, TokenType.ASTERISK_EQ, TokenType.SLASH_EQ, TokenType.MODULUS_EQ}
+
 class Parser:
     def __init__(self, lexer: Lexer) -> None:
         self.lexer: Lexer = lexer
@@ -53,6 +56,8 @@ class Parser:
             TokenType.STRING: self.__parse_string_literal,
             TokenType.LPAREN: self.__parse_grouped_expression,
             TokenType.IDENT: self.__parse_identifier,
+            TokenType.MINUS: self.__parse_prefix_expression,
+            TokenType.BANG: self.__parse_prefix_expression,
             TokenType.IF: self.__parse_if_expression,
             TokenType.TRUE: self.__parse_boolean_literal,
             TokenType.FALSE: self.__parse_boolean_literal
@@ -132,7 +137,8 @@ class Parser:
 
     # statement methods
     def __parse_statement(self) -> Statements:
-        if self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+        ASSIGN_TOKENS = {TokenType.EQ, TokenType.PLUS_EQ, TokenType.MINUS_EQ, TokenType.ASTERISK_EQ, TokenType.SLASH_EQ, TokenType.MODULUS_EQ}
+        if self.current_token.type == TokenType.IDENT and self.peek_token.type in ASSIGN_TOKENS:
             return self.__parse_assignment_statement()
 
         if self.current_token.type == TokenType.LET:
@@ -312,15 +318,37 @@ class Parser:
 
     def __parse_assignment_statement(self) -> AssignmentStatement:
         stmt: AssignmentStatement = AssignmentStatement()
-
         stmt.ident = IdentifierLiteral(value=self.current_token.literal)
 
-        self.__next_token()  # consume identifier
-        self.__next_token()  # consume '->'(=)
+        # consume identifier -> now current_token will be the assignment operator
+        self.__next_token()
+        op_token = self.current_token
 
-        stmt.right_value = self.__parse_expression(PrecedenceType.P_LOWEST)
+        # move to start of right-hand expression
+        self.__next_token()
 
-        self.__next_token()  # consume expression
+        right = self.__parse_expression(PrecedenceType.P_LOWEST)
+
+        # if this was a compound assignment like '+=' build an infix expression
+        if op_token.type == TokenType.PLUS_EQ:
+            stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='+', right_node=right)
+        elif op_token.type == TokenType.MINUS_EQ:
+            stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='-', right_node=right)
+        elif op_token.type == TokenType.ASTERISK_EQ:
+            stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='*', right_node=right)
+        elif op_token.type == TokenType.SLASH_EQ:
+            stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='/', right_node=right)
+        elif op_token.type == TokenType.MODULUS_EQ:
+            stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='%', right_node=right)
+        else:
+            # simple assignment ('=' or '->')
+            stmt.right_value = right
+
+        # advance until semicolon, RPAREN or EOF to leave parser in consistent state
+        while (not self.__current_token_is(TokenType.SEMICOLON)
+               and not self.__current_token_is(TokenType.RPAREN)
+               and not self.__current_token_is(TokenType.EOF)):
+            self.__next_token()
 
         return stmt
 
@@ -395,7 +423,7 @@ class Parser:
             if self.current_token.type == TokenType.LET:
                 init = self.__parse_let_statement()
 
-            elif self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+            elif self.current_token.type == TokenType.IDENT and self.peek_token.type in ASSIGN_TOKENS:
                 init = self.__parse_assignment_statement()
 
             else:
@@ -416,11 +444,12 @@ class Parser:
 
 
         condition = None
-        if not self.__current_token_is(TokenType.COMMA):
+        # condition is empty if current token is a semicolon
+        if not self.__current_token_is(TokenType.SEMICOLON):
             condition = self.__parse_expression(PrecedenceType.P_LOWEST)
 
-        # expect comma separating condition and post
-        if not self.__expect_peek(TokenType.COMMA):
+        # expect semicolon separating condition and post
+        if not self.__expect_peek(TokenType.SEMICOLON):
             return None
 
 
@@ -431,7 +460,7 @@ class Parser:
 
         post = None
         if not self.__current_token_is(TokenType.RPAREN):
-            if self.current_token.type == TokenType.IDENT and self.peek_token.type == TokenType.EQ:
+            if self.current_token.type == TokenType.IDENT and self.peek_token.type in ASSIGN_TOKENS:
                 post = self.__parse_assignment_statement()
             else:
                 post = self.__parse_expression_statement()
@@ -551,6 +580,16 @@ class Parser:
         s = StringLiteral()
         s.value = self.current_token.literal
         return s
+
+    def __parse_prefix_expression(self) -> Expressions:
+        expr = PrefixExpression(operator=self.current_token.literal)
+
+        # move to the expression after the prefix operator
+        self.__next_token()
+
+        expr.right_node = self.__parse_expression(PrecedenceType.P_PREFIX)
+
+        return expr
 
 
 

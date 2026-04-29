@@ -4,50 +4,52 @@ target datalayout = ""
 
 @"true" = constant i1 1
 @"false" = constant i1 0
-declare i32 @"printf"(i8* %".1", i32 %".2")
+declare i32 @"printf"(i8* %".1", ...)
 
 define i32 @"main"()
 {
 main_entry:
-  %".2" = alloca i32
-  store i32 0, i32* %".2"
-  %".4" = alloca i32
-  store i32 0, i32* %".4"
+  %".2" = sub i32 0, 10
+  %".3" = alloca i32
+  store i32 %".2", i32* %".3"
+  %".5" = alloca i32
+  store i32 0, i32* %".5"
   br label %"for_cond"
 for_cond:
-  %".7" = load i32, i32* %".4"
-  %".8" = icmp slt i32 %".7", 10
-  br i1 %".8", label %"for_body", label %"for_end"
+  %".8" = load i32, i32* %".5"
+  %".9" = icmp slt i32 %".8", 10
+  br i1 %".9", label %"for_body", label %"for_end"
 for_body:
-  %".10" = load i32, i32* %".4"
-  %".11" = icmp eq i32 %".10", 2
-  br i1 %".11", label %"for_body.if", label %"for_body.endif"
+  %".11" = load i32, i32* %".5"
+  %".12" = icmp eq i32 %".11", 5
+  br i1 %".12", label %"for_body.if", label %"for_body.endif"
 for_post:
-  %".26" = load i32, i32* %".4"
-  %".27" = add i32 %".26", 1
-  store i32 %".27", i32* %".4"
+  %".27" = load i32, i32* %".5"
+  %".28" = add i32 %".27", 1
+  store i32 %".28", i32* %".5"
   br label %"for_cond"
 for_end:
-  ret i32 0
+  %".31" = load i32, i32* %".3"
+  ret i32 %".31"
 for_body.if:
-  br label %"for_post"
+  br label %"for_end"
 for_body.endif:
-  %".15" = load i32, i32* %".4"
-  %".16" = icmp eq i32 %".15", 5
+  %".16" = icmp eq i1 0, 0
   br i1 %".16", label %"for_body.endif.if", label %"for_body.endif.endif"
-after_continue:
+after_break:
   br label %"for_body.endif"
 for_body.endif.if:
-  br label %"for_end"
-for_body.endif.endif:
-  %".20" = bitcast [8 x i8]* @".str0" to i8*
-  %".21" = load i32, i32* %".4"
-  %".22" = call i32 @"printf"(i8* %".20", i32 %".21")
-  %".23" = load i32, i32* %".4"
-  store i32 %".23", i32* %".2"
-  br label %"for_post"
-after_break:
+  %".18" = bitcast [34 x i8]* @".str0" to i8*
+  %".19" = call i32 (i8*, ...) @"printf"(i8* %".18")
   br label %"for_body.endif.endif"
+for_body.endif.endif:
+  %".21" = bitcast [8 x i8]* @".str1" to i8*
+  %".22" = load i32, i32* %".5"
+  %".23" = call i32 (i8*, ...) @"printf"(i8* %".21", i32 %".22")
+  %".24" = load i32, i32* %".5"
+  store i32 %".24", i32* %".3"
+  br label %"for_post"
 }
 
-@".str0" = constant [8 x i8] [i8 105, i8 32, i8 61, i8 32, i8 37, i8 105, i8 10, i8 0]
+@".str0" = constant [34 x i8] [i8 110, i8 111, i8 116, i8 32, i8 102, i8 97, i8 108, i8 115, i8 101, i8 32, i8 115, i8 111, i8 32, i8 98, i8 101, i8 32, i8 116, i8 114, i8 117, i8 101, i8 32, i8 58, i8 41, i8 10, i8 116, i8 101, i8 115, i8 116, i8 97, i8 110, i8 100, i8 111, i8 10, i8 0]
+@".str1" = constant [8 x i8] [i8 105, i8 32, i8 61, i8 32, i8 37, i8 105, i8 10, i8 0]

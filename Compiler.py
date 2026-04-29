@@ -51,7 +51,8 @@ class Compiler:
 
         # declare a C-like printf: int printf(i8*, i32)
         i8ptr = ir.IntType(8).as_pointer()
-        printf_ty = ir.FunctionType(ir.IntType(32), [i8ptr, ir.IntType(32)])
+        # printf should accept a format string and varargs
+        printf_ty = ir.FunctionType(ir.IntType(32), [i8ptr], var_arg=True)
         printf_func = ir.Function(self.module, printf_ty, name="printf")
         self.env.define("printf", printf_func, printf_func.function_type.return_type)
 
@@ -484,3 +485,27 @@ class Compiler:
             return self.__visit_infix_expression(node)
         elif t == NodeType.CallExpression:
             return self.__visit_call_expression(node)
+        elif t == NodeType.PrefixExpression:
+            # unary operators: '-' (negation) and '!' (logical not)
+            # evaluate right side
+            right_val, right_type = self.__resolve_value(node.right_node)
+
+            if right_val is None or right_type is None:
+                return None
+
+            op = node.operator
+            if op == '-':
+                if isinstance(right_type, ir.IntType):
+                    zero = ir.Constant(self.type_map['int'], 0)
+                    return self.builder.sub(zero, right_val), self.type_map['int']
+                elif isinstance(right_type, ir.FloatType):
+                    zero = ir.Constant(self.type_map['float'], 0.0)
+                    return self.builder.fsub(zero, right_val), self.type_map['float']
+            elif op == '!':
+                # logical not: compare to zero for boolean
+                if isinstance(right_type, ir.IntType):
+                    zero = ir.Constant(ir.IntType(1), 0)
+                    val = self.builder.icmp_signed('==', right_val, zero)
+                    return val, ir.IntType(1)
+
+            return None

@@ -4,6 +4,8 @@ from Compiler import Compiler
 from AST import Program
 import json
 import time
+import re
+import os
 
 from llvmlite import ir
 import llvmlite.binding as llvm
@@ -17,8 +19,34 @@ COMPILER_DEBUG: bool = True
 RUN_CODE: bool = True
 
 if __name__ == '__main__':
-    with open("tests/test_postfix.obs", "r") as f:
+    with open("tests/test_import.pep", "r") as f:
         code: str = f.read()
+
+    # expand local imports of the form: import "file.pep";
+    def _expand_imports(src: str, base_dir: str, _seen: set | None = None) -> str:
+        if _seen is None:
+            _seen = set()
+
+        pattern = re.compile(r'^\s*import\s*"([^"]+)"\s*;\s*$', re.MULTILINE)
+
+        def _repl(m: re.Match) -> str:
+            fname = m.group(1)
+            full = os.path.normpath(os.path.join(base_dir, fname))
+            if full in _seen:
+                return ""
+            _seen.add(full)
+            try:
+                with open(full, 'r') as fh:
+                    inner = fh.read()
+            except Exception as e:
+                print(f"COULD NOT OPEN IMPORT FILE {full}: {e}")
+                return ""
+
+            return _expand_imports(inner, os.path.dirname(full), _seen)
+
+        return pattern.sub(lambda m: _repl(m), src)
+
+    code = _expand_imports(code, os.path.dirname(os.path.abspath("tests/test_import.pep")))
 
     if LEXER_DEBUG:
         print("<<<  LEXER DEBUG >>>")

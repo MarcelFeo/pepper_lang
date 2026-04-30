@@ -450,7 +450,11 @@ class Parser:
             condition = self.__parse_expression(PrecedenceType.P_LOWEST)
 
         # expect semicolon separating condition and post
-        if not self.__expect_peek(TokenType.SEMICOLON):
+        # accept either `;` or `,` between condition and post (some tests use comma)
+        if self.__peek_token_is(TokenType.SEMICOLON) or self.__peek_token_is(TokenType.COMMA):
+            self.__next_token()
+        else:
+            self.__peek_error(TokenType.SEMICOLON)
             return None
 
 

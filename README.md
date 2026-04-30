@@ -1,125 +1,213 @@
-# Obsidian Compiler
-# Linguagem Obsidian — Documento de Referência
 
-Esta documentação descreve a sintaxe, semântica e limitações atuais da linguagem "Obsidian" e como usar o compilador disponível neste repositório.
+<p align="center">
+  <img src="img/pepper_logo_wbg.png" width="300">
+</p>
+
+
+# Pepper, Linguagem de Programação
+
+
+Bem-vindo ao projeto Pepper: uma linguagem de programação educacional e experimental desenvolvida neste repositório. Este documento descreve o propósito, arquitetura, instalação, exemplos de uso, sintaxe, ferramentas e como contribuir.
+
+
+**Status:** Experimental — implementações de *lexer*, *parser*, *AST*, e um *compiler/interpreter* simples estão incluídas.
+
+**Índice**
+
+- [Visão Geral](#visão-geral)
+- [Características](#características)
+- [Arquitetura do Projeto](#arquitetura-do-projeto)
+- [Instalação e execução](#instalação-e-execução)
+- [Sintaxe e exemplos](#sintaxe-e-exemplos)
+- [Ferramentas e testes](#ferramentas-e-testes)
+- [Estrutura do repositório](#estrutura-do-repositório)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
 
 ## Visão Geral
 
-Obsidian é uma linguagem imperativa e tipada (estaticamente em notação), desenvolvida como um projeto educacional para demonstrar fases clássicas de compilador: lexer, parser, geração de AST e geração de LLVM IR. A implementação atual gera código LLVM usando `llvmlite` e pode executar programas via JIT.
-# Obsidian Compiler
+Pepper é uma linguagem simples pensada para aprendizado de compiladores e interpretes. O objetivo é oferecer um conjunto pequeno de recursos, expressões, funções, controle de fluxo e I/O. Permitindo experimentar com tradução para IR e execução.
 
-Obsidian é uma linguagem imperativa didática implementada neste repositório com um pipeline mínimo de compilador: lexer, parser, AST e geração de LLVM IR (via `llvmlite`). O projeto demonstra etapas clássicas de compilação e permite executar programas por JIT.
+O repositório contém uma implementação em Python que inclui:
 
-Este README traz um resumo rápido de uso, sintaxe essencial, exemplos e instruções de desenvolvimento.
+- `Lexer.py` — análise léxica.
+- `Parser.py` — análise sintática e construção de árvore sintática abstrata (AST).
+- `AST.py` — estrutura e modelos de nós da AST.
+- `Compiler.py` — geração de código intermediário / interpretação.
+- `Environment.py` — escopo e ambiente de execução.
+- `Token.py` — definições de tokens.
+- `main.py` — ponto de entrada para executar arquivos Pepper.
 
-## Sumário rápido
+## Características
 
-- Instalar dependências: `pip install llvmlite`
-- Executar (por padrão o `main.py` lê `tests/test_for.obs`):
+- Sintaxe compacta e legível.
+- Funções de primeira classe e chamadas simples.
+- Estruturas de controle: `if`, `for`, `while`.
+- Suporte básico a variáveis e operadores aritméticos e lógicos.
+- Sistema de ambiente para variáveis locais e globais.
 
-```bash
-python main.py
-```
+## Arquitetura do Projeto
 
-- Ajuste as flags de debug em `main.py` (`LEXER_DEBUG`, `PARSER_DEBUG`, `COMPILER_DEBUG`, `RUN_CODE`).
+O fluxo básico do compilador/interpreter é:
 
-## Sintaxe essencial
+1. `Lexer.py` tokeniza o código-fonte.
+2. `Parser.py` consome tokens e produz uma `AST` (`AST.py`).
+3. `Compiler.py` (ou interpretador) percorre a AST e executa/gera IR.
+4. `Environment.py` mantém variáveis e escopos durante execução.
 
-- Declaração de variável:
-
-```
-let name$int -> 5;
-```
-
-- Atribuição:
-
-```
-name -> expr;
-```
-
-- Função:
-
-```
-fun main(): int {
-    return 0;
-}
-```
-
-- Laços e controle:
-  - `if <cond> { ... } [else { ... }]`
-  - `while <cond> { ... }`
-  - `for (<init>; <cond>, <post>) { ... }`  (sintaxe: init; condition, post)
-  - `break;`, `continue;`
-
-Exemplo de `for` (existe em `tests/test_for.obs`):
-
-```
-for (let i$int = 0; i < 10, i -> i + 1) {
-    if (i == 2) { continue; }
-    if (i == 5) { break; }
-    printf("i = %i\n", i);
-}
-```
-
-## Tipos suportados
-
-- `int` — i32
-- `float` — float
-- `bool` — i1 (internamente)
-
-Observação: há checagem de tipos incompleta em caminhos mais complexos; use exemplos em `tests/` como referência.
-
-## Arquitetura do projeto (arquivos principais)
-
-- `Lexer.py` — tokenização
-- `Parser.py` — constrói AST
-- `AST.py` — definições dos nós AST
-- `Compiler.py` — gera LLVM IR com `llvmlite`
-- `Environment.py` — ambiente/escopo de variáveis
-- `Token.py` — tipos e lookup de palavras-chave
-- `main.py` — orquestra leitura, parsing, compilação e execução JIT
+Esses módulos se integram para transformar um arquivo `.obs` (ex.: arquivos de teste em `tests/`) em execução.
 
 ## Instalação e execução
 
-1. Instale dependências:
+Requisitos:
+
+- Python 3.10+ (ou 3.8+ se compatível com dependências locais).
+
+Passos:
+
+1. Clone o repositório.
 
 ```bash
-pip install llvmlite
+git clone <repositório>
 ```
 
-2. Execute o compilador/runner:
+2. (Opcional) Crie e ative um virtualenv:
 
 ```bash
-python main.py
+python -m venv .venv
+.
+# Windows
+.\.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
 ```
 
-Observações:
+3. Execute scripts e exemplos diretamente com Python:
 
-- `main.py` lê por padrão `tests/test_for.obs`. Para testar outros arquivos, edite `main.py` ou substitua o conteúdo de `tests/test_for.obs`.
-- Para salvar o IR gerado, ative `COMPILER_DEBUG = True` em `main.py` (gera `debug/ir.obs`).
+```bash
+python main.py path/para/programa.obs
+```
 
-## Testes e exemplos
+Observação: `main.py` é o ponto de entrada que carrega um arquivo fonte Pepper, passa pelo lexer e parser e invoca o interpretador/compilador.
 
-Os exemplos estão em `tests/` (por ex. `test.obs`, `test_for.obs`, `test_while.obs`). Execute `python main.py` para compilar/rodar o exemplo atual.
+## Sintaxe e exemplos
 
-## Desenvolvimento
+Aqui estão os elementos básicos da linguagem Pepper.
 
-- Para adicionar novas features, foque em `Lexer.py` → `Parser.py` → `AST.py` → `Compiler.py`.
-- Use `PARSER_DEBUG = True` para gerar `debug/ast.json` e inspecionar a AST.
+### Literais
 
-## Mudanças recentes e notas
+- Números inteiros: `42`, `0`, `-7`
+- Strings: `"Olá, Pepper"`
+- Booleanos: `true`, `false`
 
-- Implementado suporte ao laço `for` (parser + AST + geração de IR) e tratamento de `break`/`continue`.
-- Ajustes no parser para evitar dessincronização ao consumir tokens de parênteses e chaves.
-- O operador de potência (`**`) não tem backend implementado ainda.
+### Declaração e atribuição
 
-## Como contribuir
+```pepper
+let x$int -> 10;
+x -> x + 5;
+```
 
-- Abra uma issue descrevendo o problema ou a melhoria.
-- Faça um fork, crie uma branch e envie um pull request com testes (adicionar exemplos em `tests/`).
+`let` declara variáveis locais. A atribuição usa `=`.
+
+### Funções
+
+```pepper
+fun soma(a$int, b$int): int {
+  return a + b;
+}
+
+let r -> soma(2, 3);
+```
+
+Funções retornam com `return`. Os parâmetros são passados por valor.
+
+### Controle de Fluxo
+
+if/else:
+
+```pepper
+if (x > 0) {
+  printf("positivo\n");
+} else {
+  printf("não-positivo\n");
+}
+```
+
+while:
+
+```pepper
+let i$int -> 0;
+while (i < 5) {
+  printf("%d\n", i);
+  i -> i + 1;
+}
+```
+
+for (exemplo comum):
+
+```pepper
+for (let i$int -> 0; i < 10; i -> i + 1) {
+  printf("%d ", i);
+}
+```
+
+### Exemplo completo
+
+```pepper
+fun factorial(n$int) {
+  if (n <= 1) {
+    return 1;
+  }
+  return n * factorial(n - 1);
+}
+
+let f5$int -> factorial(5);
+printf("5! = %d\n", f5);
+```
+
+### Entrada/Saída
+
+O repositório inclui uma função `printf` (ou equivalente) para saída formatada.
+
+## Ferramentas e testes
+
+Existe uma pasta `tests/` com arquivos `.obs` que demonstram programas de exemplo e casos de teste. Para executar manualmente um teste:
+
+```bash
+python main.py tests/test.obs
+```
+
+Há também scripts auxiliares em `scripts/` (por exemplo, `scripts/inspect_tokens.py`) para depuração do lexer.
+
+## Estrutura do repositório
+
+- [AST.py](AST.py) — Definições da AST
+- [Compiler.py](Compiler.py) — Geração de IR / interpretador
+- [Environment.py](Environment.py) — Gerenciamento de escopos
+- [Lexer.py](Lexer.py) — Tokenização
+- [Parser.py](Parser.py) — Parsing e construção da AST
+- [Token.py](Token.py) — Representação de tokens
+- [main.py](main.py) — Entrada para execução de arquivos Pepper
+- [scripts/](scripts/) — Ferramentas auxiliares
+- [tests/](tests/) — Programas de exemplo e casos de teste
+- [img/pepper_logo.png](img/pepper_logo.png) — Logo do projeto
+- [img/pepper_logo_wbg.png](img/pepper_logo_wbg.png) — Logo com fundo
+
+## Contribuição
+
+Contribuições são bem-vindas. Sugestões de issues, correções de bugs e melhorias de documentação ajudam muito.
+
+- Abra uma *issue* descrevendo o problema ou feature.
+- Para correções: faça um fork, crie uma branch, implemente e submeta um *pull request*.
+
+Guidelines de contribuição:
+
+- Mantenha mudanças pequenas e focadas.
+- Adicione testes para novas funcionalidades quando possível.
+- Documente a mudança no `README.md` ou crie exemplos em `tests/`.
 
 ---
 
-Arquivo principal de documentação: `README.md`
-- `AST.py`: modelos de nós da AST.
-
+<p align="center">
+  <img src="img/pepper_logo.png" width="300">
+</p>

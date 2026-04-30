@@ -17,7 +17,7 @@ COMPILER_DEBUG: bool = True
 RUN_CODE: bool = True
 
 if __name__ == '__main__':
-    with open("tests/test_prefix.obs", "r") as f:
+    with open("tests/test_postfix.obs", "r") as f:
         code: str = f.read()
 
     if LEXER_DEBUG:

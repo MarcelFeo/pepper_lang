@@ -57,6 +57,7 @@ class Parser:
             TokenType.LPAREN: self.__parse_grouped_expression,
             TokenType.IDENT: self.__parse_identifier,
             TokenType.MINUS: self.__parse_prefix_expression,
+            TokenType.PLUS: self.__parse_prefix_expression,
             TokenType.BANG: self.__parse_prefix_expression,
             TokenType.IF: self.__parse_if_expression,
             TokenType.TRUE: self.__parse_boolean_literal,
@@ -505,6 +506,43 @@ class Parser:
 
 
     def __parse_infix_expression(self, left_node: Expressions) -> Expressions:
+        # Handle postfix increment/decrement patterns like `i++` and `i--`.
+        # When the parser reaches the first '+' or '-' and the next token
+        # is the same, interpret as a postfix update and turn it into an
+        # AssignmentStatement (e.g. `i += 1`). This keeps changes local
+        # and compatible with existing compiler handling of assignments.
+        from AST import AssignmentStatement, IntegerLiteral
+
+        # detect postfix ++
+        if self.current_token.type == TokenType.PLUS and self.peek_token.type == TokenType.PLUS:
+            # consume the second '+'
+            if isinstance(left_node, IdentifierLiteral):
+                stmt: AssignmentStatement = AssignmentStatement()
+                stmt.ident = IdentifierLiteral(value=left_node.literal if hasattr(left_node, 'literal') else left_node.value)
+                one = IntegerLiteral(value=1)
+                stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='+', right_node=one)
+                self.__next_token()
+                return stmt
+            else:
+                self.errors.append("POSTFIX '++' APPLIED TO NON-IDENTIFIER.")
+                self.__next_token()
+                return left_node
+
+        # detect postfix --
+        if self.current_token.type == TokenType.MINUS and self.peek_token.type == TokenType.MINUS:
+            if isinstance(left_node, IdentifierLiteral):
+                stmt: AssignmentStatement = AssignmentStatement()
+                stmt.ident = IdentifierLiteral(value=left_node.literal if hasattr(left_node, 'literal') else left_node.value)
+                one = IntegerLiteral(value=1)
+                stmt.right_value = InfixExpression(left_node=IdentifierLiteral(value=stmt.ident.value), operator='-', right_node=one)
+                self.__next_token()
+                return stmt
+            else:
+                self.errors.append("POSTFIX '--' APPLIED TO NON-IDENTIFIER.")
+                self.__next_token()
+                return left_node
+
+        # default infix handling
         infix_expr: InfixExpression = InfixExpression(left_node=left_node, operator=self.current_token.literal)
 
         precedence = self.__current_precedence()

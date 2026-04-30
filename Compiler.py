@@ -86,6 +86,13 @@ class Compiler:
             self.__visit_infix_expression(node)
         elif t == NodeType.CallExpression:
             self.__visit_call_expression(node)
+        # handle prefix and literal expressions by resolving their values
+        elif t == NodeType.PrefixExpression:
+            return self.__resolve_value(node)
+        elif t == NodeType.IntegerLiteral or t == NodeType.FloatLiteral or t == NodeType.IdentifierLiteral:
+            return self.__resolve_value(node)
+        elif t == NodeType.BooleanLiteral or t == NodeType.StringLiteral:
+            return self.__resolve_value(node)
 
     # visit method
     def __visit_program(self, node: Program) -> None:

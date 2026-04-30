@@ -7,19 +7,42 @@ import time
 import re
 import os
 
+from argparse import ArgumentParser, Namespace
+
 from llvmlite import ir
 import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE, c_int, c_float, c_char_p
 import ctypes
 
+def parse_arguments() -> Namespace:
+    arg_parser = ArgumentParser(
+        description="PepperLang v0.0.3-alpha"
+    )
+
+    arg_parser.add_argument("file_path", type=str, help="Path your entry point pepper file (ex: main.pep)")
+    arg_parser.add_argument("--debug", action="store_true", help="Prints internal debug information")
+
+    return arg_parser.parse_args()
+
 # debug flags
 LEXER_DEBUG: bool = False
 PARSER_DEBUG: bool = False
-COMPILER_DEBUG: bool = True
+COMPILER_DEBUG: bool = False
 RUN_CODE: bool = True
 
+PROD_DEBUG: bool = False
+
 if __name__ == '__main__':
-    with open("tests/test_import.pep", "r") as f:
+    args = parse_arguments()
+
+    if args.debug:
+        PROD_DEBUG = True
+
+    file_path: str = "tests/default.pep"
+    if args.file_path:
+        file_path = args.file_path
+
+    with open(file_path, "r") as f:
         code: str = f.read()
 
     # expand local imports of the form: import "file.pep";
@@ -57,7 +80,10 @@ if __name__ == '__main__':
     l: Lexer = Lexer(source=code)
     p: Parser = Parser(lexer=l)
 
+    parse_st: float = time.time()
     program: Program = p.parse_program()
+    parse_et: float = time.time()
+
     if len(p.errors) > 0:
         for err in p.errors:
             print(err)
@@ -72,7 +98,10 @@ if __name__ == '__main__':
         print("WROTE AST TO debug/ast.json SUCCESSFULLY!!!")
 
     c: Compiler = Compiler()
+
+    compiler_st: float = time.time()
     c.compile(node=program)
+    compiler_et: float = time.time()
 
     # output steps
     module: ir.Module = c.module
@@ -134,3 +163,9 @@ if __name__ == '__main__':
         result = cfunc()
 
         et = time.time()
+
+        if PROD_DEBUG:
+            print(f"RESULT: {result}")
+            print(f"PARSE TIME: {parse_et - parse_st:.6f} seconds")
+            print(f"COMPILE TIME: {compiler_et - compiler_st:.6f} seconds")
+            print(f"EXECUTION TIME: {et - st:.6f} seconds")
